@@ -6,7 +6,7 @@
 import * as d3 from "d3";
 const svg = ref(null);
 
-interface GdpDataPoint {
+export interface GdpDataPoint {
   year: number;
   gdp_pc: number;
   source: string;
@@ -38,7 +38,6 @@ const drawChart = () => {
       }
     })
     .filter((d) => !!d);
-
   const domainY = d3.extent(props.data, (d) => d.gdp_pc);
 
   if (
@@ -98,11 +97,26 @@ const drawChart = () => {
     .attr("stroke", "steelblue")
     .attr("stroke-width", 1.5)
     .attr("d", line(props.data));
+
+  // Add title
+  svgEl
+    .append("text")
+    .text("Evolució del PIB de les Illes Balears")
+    .attr("id", "title")
+    .attr("x", marginLeft)
+    .attr("y", marginTop)
+    .attr("font-size", "24px")
+    .attr("font-weight", "bold");
 };
 
 onMounted(drawChart);
 
-watch(() => props.data, drawChart);
+watch(
+  () => props.data,
+  () => {
+    drawChart();
+  },
+);
 </script>
 
 <style scoped></style>
