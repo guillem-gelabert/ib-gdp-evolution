@@ -12,7 +12,7 @@
 - Integer phases (1, 2, 3, 4): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: D3 Chart Upgrade** — Hide points, nearest-x tooltip, Perlin-noise line, grow animation, arrowhead *(v1.0)*
+- [x] **Phase 1: D3 Chart Upgrade** — Hide points, nearest-x tooltip, Perlin-noise line, grow animation, arrowhead *(v1.0)*
 - [ ] **Phase 2: Data Pipeline Extension** — Extend `extend_gdp.py`: 2020 anchor, peer regions/countries, EU-15 weighted reference, regenerated IB *(v2.0)*
 - [ ] **Phase 3: Act II Chart Component** — New Vue component: multi-line, dual axis modes, animated axis transition, per-line state, annotations *(v2.0)*
 - [ ] **Phase 4: Act II Scrollytelling** — New scrollama scene, Steps 8–17 from `act2.md`, axis-switch choreography, editorial prose layout *(v2.0)*
@@ -40,9 +40,9 @@
 **Plans**: 3 plans in 3 waves (sequential — same component file)
 
 Plans:
-- [ ] `01-d3-chart-upgrade-v1-0/01-01-PLAN.md` — CHART-01, CHART-03, CHART-05: hidden default points, memoized simplex line, marker defs + `marker-end`
-- [ ] `01-d3-chart-upgrade-v1-0/01-02-PLAN.md` — CHART-02: overlay, `d3.pointers` + nearest-year bisect, full-height crosshair, highlight + tooltip, pointer leave clears
-- [ ] `01-d3-chart-upgrade-v1-0/01-03-PLAN.md` — CHART-04, CHART-06: 800ms stroke-dash reveal + `nuxt generate` + browser console smokescreen
+- [x] `01-d3-chart-upgrade-v1-0/01-01-PLAN.md` — CHART-01, CHART-03, CHART-05: hidden default points, memoized simplex line, marker defs + `marker-end`
+- [x] `01-d3-chart-upgrade-v1-0/01-02-PLAN.md` — CHART-02: overlay, `d3.pointers` + nearest-year bisect, full-height crosshair, highlight + tooltip, pointer leave clears
+- [x] `01-d3-chart-upgrade-v1-0/01-03-PLAN.md` — CHART-04, CHART-06: 800ms stroke-dash reveal + `nuxt generate` + browser console smokescreen
 
 ---
 
@@ -111,20 +111,20 @@ Plans:
 
 ## Current State
 
-**Active Phase**: 1 (v1.0, ready to execute)
+**Active Phase**: 2 (v2.0 — next)
 **Queued**: Phases 2 → 3 → 4 (v2.0, requirements locked, plans TBD)
-**Completed Phases**: None
+**Completed Phases**: Phase 1 (v1.0 D3 chart upgrade)
 
 ## Traceability
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| CHART-01 | Phase 1 | Pending |
-| CHART-02 | Phase 1 | Pending |
-| CHART-03 | Phase 1 | Pending |
-| CHART-04 | Phase 1 | Pending |
-| CHART-05 | Phase 1 | Pending |
-| CHART-06 | Phase 1 | Pending |
+| CHART-01 | Phase 1 | Complete |
+| CHART-02 | Phase 1 | Complete |
+| CHART-03 | Phase 1 | Complete |
+| CHART-04 | Phase 1 | Complete |
+| CHART-05 | Phase 1 | Complete |
+| CHART-06 | Phase 1 | Complete |
 | DATA-01  | Phase 2 | Pending |
 | DATA-02  | Phase 2 | Pending |
 | DATA-03  | Phase 2 | Pending |
@@ -150,4 +150,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-04-23*
-*Updated: 2026-04-23 — v2.0 (Act II) phases added*
+*Updated: 2026-04-23 — Phase 1 executed (3/3 plans); v2.0 (Act II) phases queued*

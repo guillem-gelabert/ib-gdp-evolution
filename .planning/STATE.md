@@ -3,10 +3,10 @@ gsd_state_version: 1.0
 milestone: v2.0
 milestone_name: Act II — Who Else Got Richer
 status: defining
-last_updated: "2026-04-23T00:00:00.000Z"
-last_activity: 2026-04-23 -- v2.0 kickoff; requirements + roadmap locked (Phases 2, 3, 4). Phase 1 (v1.0) remains ready-to-execute.
+last_updated: "2026-04-23T12:00:00.000Z"
+last_activity: 2026-04-23 — Phase 1 (v1.0) executed: 3/3 plans, CHART-01..06 complete; automated verification PASS; human browser UAT optional.
 progress:
-  percent: 0
+  percent: 25
 ---
 
 # Project State
@@ -17,31 +17,31 @@ See: .planning/PROJECT.md (updated 2026-04-23 — v2.0 kickoff)
 
 **Core value:** Present the 125-year GDP-per-capita story as a beautiful, editorial, animated chart that communicates the long-arc transformation at a glance.
 **Current milestone:** v2.0 — Act II "Who Else Got Richer"
-**Current focus:** Phase 2 — Data Pipeline Extension (next up). Phase 1 (v1.0, Act I chart upgrade) is still pending-execution and can ship independently.
+**Current focus:** Phase 2 — Data Pipeline Extension (next). Phase 1 (v1.0 Act I chart) is **complete**.
 
 ## Current Position
 
 Active milestone: v2.0 (Act II)
+Completed: Phase 1 (v1.0 D3 chart upgrade — independent)
 Queued phases: 2 → 3 → 4
-Parallel/independent: Phase 1 (v1.0) remains ready-to-execute
-Status: Requirements + roadmap locked; plans TBD
-Last activity: 2026-04-23 -- v2.0 kickoff (requirements + roadmap committed)
+Status: Phase 1 plans executed; Phase 2+ plans TBD
+Last activity: 2026-04-23 — Phase 1 execution + verification artifact
 
-Progress (v2.0): [░░░░░░░░░░] 0%
+Progress (v2.0 roadmap): Phase 1 of 4 phase slots done for “full product” narrative; v1.0 chart shipped in repo.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 0
+- Total plans completed: 3
 - Average duration: —
-- Total execution time: 0 hours
+- Total execution time: —
 
 **By Phase:**
 
 | Phase | Milestone | Plans | Total | Avg/Plan |
 |-------|-----------|-------|-------|----------|
-| 1 | v1.0 | 0 | 0 | — |
+| 1 | v1.0 | 3 | 3 | — |
 | 2 | v2.0 | 0 (TBD) | 0 | — |
 | 3 | v2.0 | 0 (TBD) | 0 | — |
 | 4 | v2.0 | 0 (TBD) | 0 | — |
@@ -50,11 +50,12 @@ Progress (v2.0): [░░░░░░░░░░] 0%
 
 ### Decisions
 
-Decisions are logged in PROJECT.md Key Decisions table. Detailed v2.0 decisions: `.planning/notes/act2-datastory-decisions.md`.
+- Phase 1: Standard forward line reveal uses `REVEAL_MS = 800` with `d3.easeCubicInOut`; domain zoom and backward-erase keep longer/speed-based timings. Endcap is SVG `<marker>` + `marker-end` on the primary series (marker suppressed during dash tweens).
 
 ### Pending Todos
 
-None captured as formal todos. v2.0 Phase 2 has open items noted in the decisions file (population source for EU-15 weighting, INE/Eurostat dataset IDs, legacy 2022-anchor IB file handling, "peak" band styling).
+- Optional: human browser UAT for Act I (console + scroll) per `01-PHASE-VERIFICATION.md`.
+- v2.0 Phase 2 open items remain in `.planning/notes/act2-datastory-decisions.md` (population source, dataset IDs, etc.).
 
 ### Codebase Map
 
@@ -67,4 +68,4 @@ See `.planning/codebase/` (committed 2026-04-23):
 
 ---
 *Initialized: 2026-04-23*
-*Updated: 2026-04-23 — v2.0 (Act II) kickoff*
+*Updated: 2026-04-23 — Phase 1 complete*
