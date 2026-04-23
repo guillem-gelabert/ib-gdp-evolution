@@ -776,6 +776,76 @@ def fetch_demo_pjan_nuts0(geos: list[str]) -> pd.DataFrame:
     )
 
 
+def load_eurostat_population(path: Path) -> pd.DataFrame:
+    """
+    Parse a pre-downloaded Eurostat population CSV/TSV (demo_r_d2jan or demo_pjan) for
+    annual population by `geo` for EU-15 countries (D-02).
+
+    Expected filename examples: ``eurostat_demo_pop_nuts0.csv``, ``demo_pjan.tsv``.
+
+    Accepts:
+    - Tidy layout: a ``geo`` column, a ``time`` / ``year`` column, and a ``value``
+      / ``obs_value`` / ``population`` column.
+    - Wide layout: a ``geo`` column and 4-digit year column headers.
+    - Eurostat compound dimension column (comma-separated ``freq,unit,...,geo\\time``).
+
+    Returns a tidy ``(nuts2_code, year, population)`` DataFrame with `nuts2_code`
+    normalized to uppercase. Rows missing geo, year, or population are dropped.
+    Years outside YEAR_MIN..YEAR_MAX are dropped. If a country lacks a year,
+    the caller should emit WARN in the report.
+    """
+    raw = expand_compound_dimension_column(load_eurostat_raw(path))
+    raw = normalize_columns(raw)
+
+    # Identify geography column.
+    code_col = identify_code_column(
+        raw,
+        candidates=["geo", "geo_time_period", "nuts2_code", "nuts0_code", "nuts", "region"],
+    )
+
+    # Look for an explicit population / value column.
+    pop_candidates = ["population", "value", "obs_value", "values"]
+    pop_col: str | None = None
+    for c in pop_candidates:
+        if c in raw.columns and c != code_col:
+            pop_col = c
+            break
+
+    tidy_cols = identify_year_value_columns(raw)
+    if tidy_cols:
+        year_col, val_col = tidy_cols
+        pc = pop_col if pop_col and pop_col != val_col else val_col
+        out = raw[[code_col, year_col, pc]].copy()
+        out = out.rename(columns={code_col: "nuts2_code", year_col: "year", pc: "population"})
+        out["year"] = pd.to_numeric(out["year"], errors="coerce")
+        out["population"] = parse_number(out["population"])
+    elif pop_col:
+        # Tidy with a separate year column.
+        year_c = next((c for c in raw.columns if c in {"year", "time", "time_period"}), None)
+        if year_c is None:
+            raise PipelineError("load_eurostat_population: cannot identify year column.")
+        out = raw[[code_col, year_c, pop_col]].copy()
+        out = out.rename(columns={code_col: "nuts2_code", year_c: "year", pop_col: "population"})
+        out["year"] = pd.to_numeric(out["year"], errors="coerce")
+        out["population"] = parse_number(out["population"])
+    else:
+        # Wide format: geo rows, 4-digit year column headers.
+        id_vars = [code_col]
+        out = melt_wide_years(raw, id_vars=id_vars).rename(
+            columns={code_col: "nuts2_code", "value": "population"}
+        )
+
+    out["nuts2_code"] = out["nuts2_code"].map(normalize_code)
+    out["population"] = parse_number(out["population"])
+    out = out.dropna(subset=["nuts2_code", "year", "population"])
+    out["year"] = out["year"].astype(int)
+    out = out[(out["year"] >= YEAR_MIN) & (out["year"] <= YEAR_MAX)]
+    out = out.sort_values(["nuts2_code", "year"]).drop_duplicates(["nuts2_code", "year"], keep="last")
+    if out.empty:
+        raise PipelineError(f"load_eurostat_population: {path.name} resolved to an empty population table.")
+    return out[["nuts2_code", "year", "population"]]
+
+
 def chain_link_rw_plus_institutional(
     rw: pd.DataFrame,
     inst: pd.DataFrame,
@@ -1041,7 +1111,12 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
 
     e15_euro = fetch_nama_10_pc_clv10_range(list(EU15_EUROSTAT_GEOS), 1975, YEAR_MAX)
     rw_15 = _eu15_rws_from_comparison_and_euro(workspace, e15_euro)
-    pop_eu = fetch_demo_pjan_nuts0(list(EU15_EUROSTAT_GEOS))
+    # D-02: prefer pre-downloaded population file; fall back to Eurostat API.
+    try:
+        pop_path = find_input_file(workspace, "eurostat_demo_pop_nuts0.csv")
+        pop_eu = load_eurostat_population(pop_path)
+    except PipelineError:
+        pop_eu = fetch_demo_pjan_nuts0(list(EU15_EUROSTAT_GEOS))
     pop_filled = _fill_population_backward(pop_eu)
     out_by_g: dict[str, pd.DataFrame] = {}
     g_by: dict[str, pd.DataFrame] = {}
