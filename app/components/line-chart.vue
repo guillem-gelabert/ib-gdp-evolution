@@ -82,9 +82,13 @@ const props = defineProps<{
 const WIDTH = 928;
 const HEIGHT = 400;
 const MARGIN = { top: 16, right: 32, bottom: 36, left: 80 };
-const LINE_SPEED = 0.15; // SVG user-units per ms
+/** Default stroke-dash forward reveal (scroll grow + mount); wide zoom/erase use other branches. */
+const REVEAL_MS = 800;
+const LINE_SPEED = 0.15; // SVG user-units per ms (shrink-erase heuristics)
 const MAX_DURATION = 2000;
 const MIN_DURATION = 120;
+const ARROW_MARKER_ID = "line-arrow-cap";
+const ARROW_MARKER_REF = `url(#${ARROW_MARKER_ID})`;
 let prevPathLength = 0;
 let prevMaxDataYear: number | null = null;
 let prevXMax: number | null = null;
@@ -141,6 +145,7 @@ function ensureNoiseCache(rows: GdpDataPoint[]) {
   noiseCacheKey = k;
   noiseOffsetByYear.clear();
   for (const d of rows) {
+    // Deterministic 0 for anchor years; resampled y-wobble is via sampleNoise in buildResampledSeries.
     noiseOffsetByYear.set(d.year, 0);
   }
 }
@@ -235,7 +240,6 @@ let tooltipBg: d3.Selection<SVGRectElement, unknown, null, undefined>;
 let tooltipYear: d3.Selection<SVGTextElement, unknown, null, undefined>;
 let tooltipSource: d3.Selection<SVGTextElement, unknown, null, undefined>;
 let tooltipValue: d3.Selection<SVGTextElement, unknown, null, undefined>;
-let arrowPath: d3.Selection<SVGPathElement, unknown, null, undefined>;
 let ready = false;
 const valueFormat = d3.format(",.0f");
 const LINE_COLOR = "#660000";
@@ -294,51 +298,33 @@ function applyLineGrow(
   if (!node) return 0;
   const newLength = node.getTotalLength();
   if (!Number.isFinite(newLength) || newLength <= 0) {
-    arrowPath.style("display", "none");
+    path.attr("marker-end", "none");
     return 0;
   }
 
-  const drawArrowAtProgress = (progress: number) => {
-    const clamped = Math.max(0, Math.min(1, progress));
-    const at = newLength * clamped;
-    const tip = node.getPointAtLength(at);
-    const prev = node.getPointAtLength(Math.max(0, at - 1));
-    const angle = Math.atan2(tip.y - prev.y, tip.x - prev.x) * (180 / Math.PI);
-    arrowPath
-      .style("display", null)
-      .attr("d", "M-10 -6 L0 0 L-10 6")
-      .attr("transform", `translate(${tip.x},${tip.y}) rotate(${angle})`);
-  };
-
   path.interrupt();
-  arrowPath.interrupt();
   path.attr("stroke-dasharray", `${newLength} ${newLength}`);
 
   if (!runAnimation) {
-    path.attr("stroke-dashoffset", 0);
+    path.attr("stroke-dashoffset", 0).attr("marker-end", ARROW_MARKER_REF);
     prevPathLength = newLength;
-    drawArrowAtProgress(1);
     return 0;
   }
 
   const safeStart = Math.max(0, Math.min(alreadyDrawn, newLength));
   const delta = Math.max(0, newLength - safeStart);
-  const duration = Math.min(
-    MAX_DURATION,
-    Math.max(MIN_DURATION, delta / LINE_SPEED),
-  );
-  const startOffset = delta; // = newLength - safeStart
+  const duration = REVEAL_MS;
+  const startOffset = delta;
 
-  const startFraction = newLength > 0 ? safeStart / newLength : 0;
+  path.attr("marker-end", "none").attr("stroke-dashoffset", startOffset);
 
   path
-    .attr("stroke-dashoffset", startOffset)
     .transition()
     .duration(duration)
     .ease(d3.easeCubicInOut)
     .attr("stroke-dashoffset", 0)
-    .tween("arrow-follow", () => (t: number) => {
-      drawArrowAtProgress(startFraction + t * (1 - startFraction));
+    .on("end", function onEnd(this: SVGPathElement) {
+      d3.select(this).attr("marker-end", ARROW_MARKER_REF);
     });
 
   prevPathLength = newLength;
@@ -352,20 +338,21 @@ function handlePlotPointerMove(event: Event) {
   if (!overlayNode) return;
   const pts = d3.pointers(event, overlayNode);
   if (!pts.length) return;
-  const [mx] = pts[0]!;
+  const [mxRaw] = pts[0]!;
+  const forBisect = dedupeByYear(newData);
+  if (forBisect.length === 0) return;
+  const xLeft = xScale(yearToDate(forBisect[0]!.year));
+  const xRight = xScale(
+    yearToDate(forBisect[forBisect.length - 1]!.year),
+  );
+  const mx = Math.min(Math.max(mxRaw, xLeft), xRight);
   const t = xScale.invert(mx);
   const y0y = t.getFullYear();
   const tStart = +new Date(y0y, 0, 0);
   const tEnd = +new Date(y0y + 1, 0, 0);
   const yearFloat = y0y + (t.getTime() - tStart) / (tEnd - tStart);
 
-  const forBisect = dedupeByYear(newData);
-  if (forBisect.length === 0) return;
-  const rawIdx = yearBisect(forBisect, yearFloat);
-  const i = Math.max(
-    0,
-    Math.min(Math.round(rawIdx), forBisect.length - 1),
-  );
+  const i = yearBisect(forBisect, yearFloat);
   const d = forBisect[i]!;
   showTooltip(d);
 }
@@ -413,7 +400,7 @@ function showTooltip(d: GdpDataPoint) {
   hoverLine
     .attr("x1", px)
     .attr("x2", px)
-    .attr("y1", yNoise)
+    .attr("y1", MARGIN.top)
     .attr("y2", HEIGHT - MARGIN.bottom)
     .style("display", null);
 
@@ -445,6 +432,21 @@ function initialize() {
   svgEl
     .attr("preserveAspectRatio", "xMidYMid meet")
     .attr("viewBox", `0 0 ${WIDTH} ${HEIGHT}`);
+
+  svgEl
+    .append("defs")
+    .append("marker")
+    .attr("id", ARROW_MARKER_ID)
+    .attr("viewBox", "0 -4 8 8")
+    .attr("refX", 7.2)
+    .attr("refY", 0)
+    .attr("orient", "auto")
+    .attr("markerWidth", 6)
+    .attr("markerHeight", 6)
+    .attr("markerUnits", "userSpaceOnUse")
+    .append("path")
+    .attr("d", "M0,-3.2 L7.2,0 L0,3.2 Z")
+    .attr("fill", LINE_COLOR);
 
   const domainY: [number, number] = props.yDomain || [0, 1];
   yScale = d3.scaleLinear(domainY, [HEIGHT - MARGIN.bottom, MARGIN.top]);
@@ -484,15 +486,6 @@ function initialize() {
 
   comparisonG = svgEl.append("g").style("pointer-events", "none");
   linesG = svgEl.append("g");
-  arrowPath = svgEl
-    .append("path")
-    .attr("fill", "none")
-    .attr("stroke", LINE_COLOR)
-    .attr("stroke-width", 2.5)
-    .attr("stroke-linecap", "round")
-    .attr("stroke-linejoin", "round")
-    .style("display", "none")
-    .style("pointer-events", "none");
 
   pointsG = svgEl.append("g");
 
@@ -523,7 +516,8 @@ function initialize() {
     .style("pointer-events", "all")
     .style("cursor", "crosshair")
     .on("pointermove", handlePlotPointerMove)
-    .on("pointerleave", handlePlotPointerLeave);
+    .on("pointerleave", handlePlotPointerLeave)
+    .on("pointercancel", handlePlotPointerLeave);
 
   tooltipG = svgEl
     .append("g")
@@ -612,7 +606,6 @@ function update(animate: boolean) {
       .tickPadding(12);
     xAxisG.call(axis as any).call(styleXAxis);
     linesG.selectAll("path").remove();
-    arrowPath.style("display", "none");
     pointsG.selectAll("circle").remove();
     comparisonG.selectAll("path").remove();
     hideTooltip();
@@ -702,26 +695,14 @@ function update(animate: boolean) {
       .attr("opacity", 1);
 
     pathSel.interrupt();
-    arrowPath.interrupt();
-    (pathSel as any).attr("stroke-dasharray", null).attr("stroke-dashoffset", null);
+    (pathSel as any)
+      .attr("stroke-dasharray", null)
+      .attr("stroke-dashoffset", null)
+      .attr("marker-end", "none");
 
-    // Initial path: old data on old scale (arrow will be at right edge).
+    // Initial path: old data on old scale.
     const oldSamples = sampledSeries.filter((s) => s.year <= prevXMax!);
     pathSel.attr("d", makeLineGen(animScale)(oldSamples) ?? "");
-
-    const initNode = pathSel.node();
-    if (initNode && initNode.getTotalLength() > 0) {
-      const l = initNode.getTotalLength();
-      const tip = initNode.getPointAtLength(l);
-      const prv = initNode.getPointAtLength(Math.max(0, l - 1));
-      arrowPath
-        .style("display", null)
-        .attr("d", "M-10 -6 L0 0 L-10 6")
-        .attr(
-          "transform",
-          `translate(${tip.x},${tip.y}) rotate(${Math.atan2(tip.y - prv.y, tip.x - prv.x) * (180 / Math.PI)})`,
-        );
-    }
 
     const t0 = +yearToDate(prevXMax);
     const t1 = +yearToDate(xMax);
@@ -741,23 +722,13 @@ function update(animate: boolean) {
             (s) => s.year <= currentMaxYear + 0.1,
           );
           node.setAttribute("d", makeLineGen(animScale)(visible) ?? "");
-          const l = node.getTotalLength();
-          if (l > 0) {
-            const tip = node.getPointAtLength(l);
-            const prv = node.getPointAtLength(Math.max(0, l - 1));
-            arrowPath
-              .style("display", null)
-              .attr("d", "M-10 -6 L0 0 L-10 6")
-              .attr(
-                "transform",
-                `translate(${tip.x},${tip.y}) rotate(${Math.atan2(tip.y - prv.y, tip.x - prv.x) * (180 / Math.PI)})`,
-              );
-          }
         };
       })
       .on("end", () => {
         // Switch path to final xScale so the chart is in a clean state.
-        pathSel.attr("d", lineGen(sampledSeries) ?? "");
+        pathSel
+          .attr("d", lineGen(sampledSeries) ?? "")
+          .attr("marker-end", ARROW_MARKER_REF);
         prevPathLength = pathSel.node()?.getTotalLength() ?? 0;
       });
 
@@ -807,8 +778,10 @@ function update(animate: boolean) {
       .attr("opacity", 1);
 
     pathSel.interrupt();
-    arrowPath.interrupt();
-    (pathSel as any).attr("stroke-dasharray", null).attr("stroke-dashoffset", null);
+    (pathSel as any)
+      .attr("stroke-dasharray", null)
+      .attr("stroke-dashoffset", null)
+      .attr("marker-end", "none");
 
     // Revert to the old (longer) path as animation starting point.
     pathSel.attr("d", savedOldPathD);
@@ -827,60 +800,22 @@ function update(animate: boolean) {
       .attr("stroke-dasharray", `${oldLen} ${oldLen}`)
       .attr("stroke-dashoffset", 0);
 
-    // Place arrow at the current (old) tip.
-    if (oldLen > 0) {
-      const tip = oldNode.getPointAtLength(oldLen);
-      const prv = oldNode.getPointAtLength(Math.max(0, oldLen - 1));
-      arrowPath
-        .style("display", null)
-        .attr("d", "M-10 -6 L0 0 L-10 6")
-        .attr(
-          "transform",
-          `translate(${tip.x},${tip.y}) rotate(${Math.atan2(tip.y - prv.y, tip.x - prv.x) * (180 / Math.PI)})`,
-        );
-    }
-
     pathSel
       .transition()
       .duration(duration)
       .ease(d3.easeCubicInOut)
       .attr("stroke-dashoffset", delta)
-      .tween("shrink-follow", function () {
-        const node = this;
-        return (t: number) => {
-          // visible right boundary slides from oldLen back to startLen.
-          const visibleUpTo = startLen + (oldLen - startLen) * (1 - t);
-          if (visibleUpTo > 0) {
-            const tip = node.getPointAtLength(visibleUpTo);
-            const prv = node.getPointAtLength(Math.max(0, visibleUpTo - 1));
-            arrowPath
-              .style("display", null)
-              .attr("d", "M-10 -6 L0 0 L-10 6")
-              .attr(
-                "transform",
-                `translate(${tip.x},${tip.y}) rotate(${Math.atan2(tip.y - prv.y, tip.x - prv.x) * (180 / Math.PI)})`,
-              );
-          }
-        };
-      })
       .on("end", () => {
         // Switch to the final (shorter) path so the chart is in a clean state.
         const newD = lineGen(sampledSeries) ?? "";
         pathSel
           .attr("d", newD)
           .attr("stroke-dasharray", null)
-          .attr("stroke-dashoffset", null);
+          .attr("stroke-dashoffset", null)
+          .attr("marker-end", ARROW_MARKER_REF);
         const newNode = pathSel.node();
         if (newNode) {
           prevPathLength = newNode.getTotalLength();
-          if (prevPathLength > 0) {
-            const tip = newNode.getPointAtLength(prevPathLength);
-            const prv = newNode.getPointAtLength(Math.max(0, prevPathLength - 1));
-            arrowPath.attr(
-              "transform",
-              `translate(${tip.x},${tip.y}) rotate(${Math.atan2(tip.y - prv.y, tip.x - prv.x) * (180 / Math.PI)})`,
-            );
-          }
         }
       });
 
