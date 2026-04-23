@@ -36,14 +36,18 @@ Declared 8 pt scale (multiples of 4). Chart-internal measurements use **SVG user
 | Token | Value | Usage (this phase) |
 |-------|-------|--------------------|
 | xs | 4px | Tooltip `lineGap` between text lines; minor nudges |
-| sm | 8px | Tooltip `padX` / `padY` (8 / 6 per current — padY 6 is exception below) |
+| sm | 8px | Tooltip `padX` **and** `padY` (both 8px — see Change Note) |
 | md | 16px | `MARGIN.top` |
 | lg | 24px | (Reserved — not used in fixed chart) |
-| xl | 32px | — |
+| xl | 32px | `MARGIN.right` (see Change Note) |
 | 2xl | 48px | — |
 | 3xl | 64px | — |
 
-**Exceptions:** Tooltip vertical padding `padY = 6` (not multiple of 4) — **retain** for visual parity with current `line-chart.vue`; treat as approved micro-adjustment. `MARGIN` values `{ top: 16, right: 30, bottom: 36, left: 80 }` are fixed (already in code).
+**Change Note (grid alignment):** To satisfy the 4px grid rule:
+- Tooltip **`padY = 8`** (previously `6` in code) — executor updates `line-chart.vue` accordingly. Negligible visual impact (2px taller tooltip).
+- **`MARGIN.right = 32`** (previously `30` in code) — executor updates `line-chart.vue`. Gains 2px of right gutter; line-end arrowhead has slightly more breathing room.
+
+Other `MARGIN` values remain `{ top: 16, bottom: 36, left: 80 }` (all multiples of 4). `bottom: 36` is a multiple of 4 ✓.
 
 ---
 
@@ -101,6 +105,8 @@ Declared 8 pt scale (multiples of 4). Chart-internal measurements use **SVG user
 ---
 
 ## Phase 1 — Visual Contract (chart chrome)
+
+**Primary visual anchor:** the editorial red series line (`#660000`, 2.5px) is the hero of the figure. All other chrome (axes, grid, crosshair, tooltip) reads as secondary/supporting — the line (and its arrowhead terminator) is what carries the narrative.
 
 | Element | Spec |
 |---------|------|
