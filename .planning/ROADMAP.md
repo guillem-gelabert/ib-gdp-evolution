@@ -117,8 +117,8 @@ Plans:
 
 ## Current State
 
-**Active Phase**: 2 (v2.0 — next)
-**Queued**: Phases 2 → 3 → 4 (v2.0, requirements locked, plans TBD)
+**Active Phase**: 2 (v2.0 — next; four plans: `02-01`…`02-04` in `02-data-pipeline-extension-v2-0/`)
+**Queued**: Phases 2 → 3 → 4 (v2.0; Phase 2 plans finalized — execute next)
 **Completed Phases**: Phase 1 (v1.0 D3 chart upgrade)
 
 ## Traceability
@@ -156,4 +156,4 @@ Plans:
 
 ---
 *Roadmap created: 2026-04-23*
-*Updated: 2026-04-23 — Phase 1 executed (3/3 plans); v2.0 (Act II) phases queued*
+*Updated: 2026-04-23 — Phase 1 executed (3/3 plans); Phase 2 plans added (4/4); v2.0 Act II pipeline execute-ready*

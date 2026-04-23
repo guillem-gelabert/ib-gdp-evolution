@@ -4,7 +4,7 @@ milestone: v2.0
 milestone_name: Act II — Who Else Got Richer
 status: defining
 last_updated: "2026-04-23T12:00:00.000Z"
-last_activity: 2026-04-23 — Phase 1 (v1.0) executed: 3/3 plans, CHART-01..06 complete; automated verification PASS; human browser UAT optional.
+last_activity: 2026-04-23 — Phase 2 planning: four executable PLAN.md files added and tracked; ready for execute-phase.
 progress:
   percent: 25
 ---
@@ -24,7 +24,7 @@ See: .planning/PROJECT.md (updated 2026-04-23 — v2.0 kickoff)
 Active milestone: v2.0 (Act II)
 Completed: Phase 1 (v1.0 D3 chart upgrade — independent)
 Queued phases: 2 → 3 → 4
-Status: Phase 1 plans executed; Phase 2+ plans TBD
+Status: Phase 1 plans executed; Phase 2 has four executable plans (02-01…02-04) ready for `/gsd-execute-phase`
 Last activity: 2026-04-23 — Phase 1 execution + verification artifact
 
 Progress (v2.0 roadmap): Phase 1 of 4 phase slots done for “full product” narrative; v1.0 chart shipped in repo.
@@ -42,7 +42,7 @@ Progress (v2.0 roadmap): Phase 1 of 4 phase slots done for “full product” na
 | Phase | Milestone | Plans | Total | Avg/Plan |
 |-------|-----------|-------|-------|----------|
 | 1 | v1.0 | 3 | 3 | — |
-| 2 | v2.0 | 0 (TBD) | 0 | — |
+| 2 | v2.0 | 4 planned | 0 | — |
 | 3 | v2.0 | 0 (TBD) | 0 | — |
 | 4 | v2.0 | 0 (TBD) | 0 | — |
 

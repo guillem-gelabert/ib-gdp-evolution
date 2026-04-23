@@ -22,3 +22,6 @@ logs
 .env
 .env.*
 !.env.example
+
+# GSD phase executable plans (global *plan.md would otherwise ignore *-PLAN.md)
+!.planning/phases/*/*-PLAN.md
