@@ -32,10 +32,12 @@ Milestone 1 focuses on upgrading the D3 line chart in `app/components/line-chart
   5. An arrowhead is visible at the most-recent-year end of the line, styled consistently with the line's color and stroke.
   6. `nuxt generate` still succeeds and no console errors are thrown during scrollytelling interaction.
 
-**Plans**: TBD (planner decides; expected 1–3 plans)
+**Plans**: 3 plans in 3 waves (sequential — same component file)
 
 Plans:
-- [ ] 01-01: TBD (populated by `/gsd-plan-phase 1`)
+- [ ] `01-d3-chart-upgrade/01-01-PLAN.md` — Deps, spacing, hidden points, memoized simplex line, arrow marker defs + `marker-end`
+- [ ] `01-d3-chart-upgrade/01-02-PLAN.md` — Plot overlay, `d3.pointers` + bisector hover, full-height crosshair, highlight dot, `mouseleave` clears UI
+- [ ] `01-d3-chart-upgrade/01-03-PLAN.md` — `stroke-dasharray` / `stroke-dashoffset` line grow (800ms) on mount + `update(true)`; build verify
 
 ## Current State
 
