@@ -8,6 +8,22 @@ A Nuxt 4 scrollytelling site that visualizes the evolution of GDP per capita in 
 
 Present the 125-year GDP-per-capita story as a beautiful, editorial, animated chart that communicates the long-arc transformation at a glance.
 
+## Current Milestone: v2.0 Act II — Who Else Got Richer
+
+**Goal:** Build the Act II scrollytelling scene — a multi-line, axis-switching peer comparison that shows IB's post-1960 climb was continental, and its post-1990 relative fall is its own.
+
+**Target features:**
+- Extended chain-linked data pipeline (peer regions/countries + EU-15 reference) anchored at **2020**
+- Peer series: Extremadura, Galicia, Castilla-La Mancha, Portugal, Ireland, Malta
+- EU-15 reference line (GDP-weighted per-capita average of the 15 member countries)
+- New Act II chart component (separate from `line-chart.vue`) supporting multi-line + dual axis modes
+- Scroll-driven animated axis transition (real € → % of EU-15 avg; EU-15 line flattens to y=100 baseline)
+- Scrollytelling Steps 8–17 from `act2.md` (pre-loaded data, step-driven state)
+
+**Source spec:** `act2.md` (narrative). **Decisions log:** `.planning/notes/act2-datastory-decisions.md`.
+
+**Note on v1.0:** Phase 1 (D3 Chart Upgrade) remains in the roadmap as `pending`; v2.0 phases continue numbering from there.
+
 ## Requirements
 
 ### Validated
@@ -26,11 +42,21 @@ Present the 125-year GDP-per-capita story as a beautiful, editorial, animated ch
 
 <!-- Current scope. Building toward these. -->
 
+#### v1.0 — Act I chart upgrade (Phase 1, still pending)
+
 - [ ] Hide individual data points (circles) on the line chart
 - [ ] On mouseover anywhere on the chart, show tooltip + crosshair for the point horizontally closest to the cursor (x-axis bisect)
 - [ ] Apply subtle perlin-noise displacement to the line path for a hand-drawn/organic feel
 - [ ] Animate the line growing smoothly (stroke reveal / progressive draw on step change)
 - [ ] Add an arrowhead marker at the end of the line
+
+#### v2.0 — Act II "Who Else Got Richer"
+
+- [ ] Extend `extend_gdp.py` with configurable anchor year (2020) and non-NUTS2 series identifiers
+- [ ] Regenerate IB series + produce chain-linked peer series (Extremadura, Galicia, Castilla-La Mancha, Portugal, Ireland, Malta) and EU-15 weighted reference
+- [ ] Build Act II chart component (multi-line, dual axis modes, animated axis transition, per-line state)
+- [ ] Wire Steps 8–17 from `act2.md` as scrollytelling steps driving chart state
+- [ ] Axis-transition scroll step where EU-15 line flattens to y=100 baseline while peers re-scale
 
 ### Out of Scope
 
@@ -66,6 +92,11 @@ Present the 125-year GDP-per-capita story as a beautiful, editorial, animated ch
 | Nearest-x tooltip via `d3.bisect` on years | Standard pattern; data is already year-sorted | — Pending |
 | Line-grow animation via `stroke-dasharray` / `stroke-dashoffset` | Idiomatic D3/SVG technique, GPU-friendly | — Pending |
 | Arrowhead via `<marker>` with `marker-end` on the path | Native SVG, transitions cleanly | — Pending |
+| Re-anchor all chain-linking at 2020 for v2.0 | Consistent seam across all series (IB + peers + EU-15); required by multi-line compare | — Pending |
+| Act II uses a new chart component, not a fork of `line-chart.vue` | Multi-line + dual-axis + animated transition has different structural requirements; share visual language via extracted utilities | — Pending |
+| EU-15 reference constructed as GDP-weighted per-capita average of 15 member countries | Analytical benchmark held constant across 1900–2024; better than unweighted mean, cleaner than membership-date composition | — Pending |
+| Axis transition (real € → % EU-15) is scroll-driven, not a toggle | Matches `act2.md` Step 13 narrative choreography; EU-15 line literally flattens into the y=100 baseline | — Pending |
+| Pre-load all Act II peer data on mount | Dataset is small (tens of KB); avoids lazy-load jank during scroll | — Pending |
 
 ## Evolution
 
@@ -85,4 +116,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-23 after initialization*
+*Last updated: 2026-04-23 — milestone v2.0 (Act II) kickoff*
