@@ -48,7 +48,7 @@ Plans:
 
 ### Phase 2: Data Pipeline Extension *(v2.0)*
 
-**Goal**: Extend `scripts/extend_gdp.py` to produce a single Act II-ready CSV containing chain-linked per-capita GDP series (2020 anchor) for IB + 6 peer series + a GDP-weighted EU-15 reference, all passing the existing sanity checks.
+**Goal**: Extend `scripts/extend_gdp.py` to produce Act II per-series chain-linked per-capita GDP CSVs (2020 anchor) for IB + six peer series + a population-weighted EU-15 reference (`public/data/act2_*.csv`, schema `year,gdp_pc,source,unit`), all passing the existing sanity checks, without overwriting Act I’s `balearic_gdp_pc.csv` (per `02-CONTEXT.md` D-06–D-08).
 
 **UI hint**: no
 
@@ -57,13 +57,19 @@ Plans:
 **Requirements**: DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07, DATA-08
 
 **Success Criteria** (what must be TRUE):
-  1. `extend_gdp.py` runs with `ANCHOR_YEAR=2020` and produces a single tidy CSV containing IB, Extremadura, Galicia, Castilla-La Mancha, Portugal, Ireland, Malta, and EU-15 for years 1900–2024 with no missing rows per series.
-  2. Every series passes the existing sanity checks: seam continuity at 2020, growth-rate preservation (post-CHAIN_START), no missing years, outlier guard (YoY within ±25% except 2020–2021), level plausibility (2024/2019 ratio in [0.5, 3.0]), and CLV unit guard on Eurostat inputs.
-  3. The EU-15 reference series is computed as `sum(per_capita_i × population_i) / sum(population_i)` over the 15 member countries per year, with a documented population source for the RW window (1900–1999).
-  4. The previous 2022-anchor IB CSV is replaced (or superseded) by the new 2020-anchor output, and Act I's chart continues to load a valid IB series from the new file (or from a preserved Act-I-compatible view of it).
+  1. `extend_gdp.py` runs with `ANCHOR_YEAR=2020` (default) and emits one `public/data/act2_*.csv` per series: IB, Extremadura, Galicia, Castilla-La Mancha, Portugal, Ireland, Malta, and EU-15, each covering 1900–2024 with no unintended gaps (checks surface exceptions).
+  2. Every series passes the existing sanity checks: seam continuity at the anchor year, growth-rate preservation (post-CHAIN_START), no missing years, outlier guard (YoY within ±25% except 2020–2021), level plausibility (2024/2019 ratio in [0.5, 3.0]), and CLV unit guard on Eurostat inputs.
+  3. The EU-15 reference series is computed as `sum(per_capita_i × population_i) / sum(population_i)` over the 15 member countries per year, with population from RW (pre-2000) and Eurostat (2000+), per `02-CONTEXT.md` D-01–D-02 and `act2-datastory-decisions.md` §5.
+  4. Act I’s `balearic_gdp_pc.csv` (2022 anchor) remains unchanged; the 2020-anchor IB line for Act II is `act2_balearic_islands.csv` (or the slug locked in `02-CONTEXT.md`). Act I continues to use the original file.
   5. A sanity report is written (same format as today) and every check is PASS or WARN-with-explanation — no FAILs.
 
-**Plans**: TBD (finalized during `/gsd-plan-phase 2`)
+**Plans**: 4 plans in 4 waves (02-01 → 02-04)
+
+Plans:
+- [ ] `02-data-pipeline-extension-v2-0/02-01-PLAN.md` — DATA-01, DATA-02: anchor 2020, RW population loader, series identifier hooks
+- [ ] `02-data-pipeline-extension-v2-0/02-02-PLAN.md` — DATA-02, DATA-03, DATA-05: `load_ine_excel`, Spanish NUTS2+IB INE+RW chain-link
+- [ ] `02-data-pipeline-extension-v2-0/02-03-PLAN.md` — DATA-04, DATA-06: PT/IE/MT NUTS0, pop loaders, EU-15 weighted index
+- [ ] `02-data-pipeline-extension-v2-0/02-04-PLAN.md` — DATA-05, DATA-07, DATA-08: `act2_*.csv` emission, full sanity report, e2e verify
 
 ---
 
@@ -73,7 +79,7 @@ Plans:
 
 **UI hint**: yes
 
-**Depends on**: Phase 2 (needs the combined Act II CSV). Independent of Phase 1 for shipping, but should consume shared utilities extracted from Phase 1's component.
+**Depends on**: Phase 2 (needs the Act II `act2_*.csv` per-series assets). Independent of Phase 1 for shipping, but should consume shared utilities extracted from Phase 1's component.
 
 **Requirements**: ACT2-01, ACT2-02, ACT2-03, ACT2-04, ACT2-05, ACT2-06
 
@@ -101,7 +107,7 @@ Plans:
 
 **Success Criteria** (what must be TRUE):
   1. Act II renders as a new scene (separate from Act I's `story-page.vue`) with its own scrollama instance driving the new chart component.
-  2. All peer and EU-15 data is pre-loaded at mount via a single `useFetch` on the Phase 2 CSV; no per-step fetches.
+  2. All peer and EU-15 data is pre-loaded at mount (e.g. parallel `useFetch` on each `act2_*.csv` or one composed loader); no per-step fetches.
   3. Scrolling through Steps 8–17 reproduces the narrative beats in `act2.md`: Extremadura fade-in, peer forest, axis switch, Balearic highlight climb across 100, 1990 peak + descent, peers continuing, IB isolated "hinge" close.
   4. The Step 13 axis transition is a visibly held moment — noticeably longer dwell than surrounding steps — during which the EU-15 line flattens into y=100 while peers re-scale.
   5. Prose for Steps 8–17 renders alongside the chart in the same editorial style as Act I (typography, palette, spacing).

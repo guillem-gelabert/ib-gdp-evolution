@@ -35,11 +35,11 @@ Requirements for milestone v2.0. Source narrative: `act2.md`. Decisions log: `.p
 - [ ] **DATA-05**: The IB series is regenerated on the 2020 anchor, replacing the 2022-anchor artifact, with seam continuity verified at the anchor year.
 - [ ] **DATA-06**: Pipeline produces an EU-15 reference series computed as a GDP-weighted per-capita average across the 15 member countries (RW-derived 1900–1999 + Eurostat EU-15 aggregate 2000+).
 - [ ] **DATA-07**: All generated series pass the existing sanity checks (seam continuity, growth preservation, no missing years, outlier guard, level plausibility, CLV unit guard).
-- [ ] **DATA-08**: Pipeline emits a single tidy CSV (`series, year, value, unit, source`) consumable directly by the Act II chart component.
+- [ ] **DATA-08**: Pipeline emits one tidy per-series CSV per line (`year, gdp_pc, source, unit`, same as Act I) under `public/data/act2_*.csv`, consumable by the Act II chart (parallel fetches) — see `02-CONTEXT.md` D-07–D-08; supersedes earlier “single long CSV” wording.
 
 ### Act II Chart Component
 
-- [ ] **ACT2-01**: A new Vue component renders N peer lines + the IB line + the EU-15 reference from the combined Act II CSV.
+- [ ] **ACT2-01**: A new Vue component renders N peer lines + the IB line + the EU-15 reference from the Act II `act2_*.csv` per-series data (or a single merged fetch layer — per Phase 3 plan).
 - [ ] **ACT2-02**: The component supports two axis modes — `real-eur` (GDP per capita, real €) and `pct-eu15` (% of EU-15 average, EU-15 = 100) — selected via a prop.
 - [ ] **ACT2-03**: Transitioning from `real-eur` to `pct-eu15` is an animated tween in which the EU-15 line morphs/flattens to the y=100 baseline while all other lines re-scale in the same tween (held moment, longer duration than surrounding transitions).
 - [ ] **ACT2-04**: Per-line visual state (active-color, faded-gray, hidden, highlighted) is controlled via step-driven props, with independent transitions per line.
