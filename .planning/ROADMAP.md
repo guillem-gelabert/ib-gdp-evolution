@@ -40,9 +40,9 @@
 **Plans**: 3 plans in 3 waves (sequential — same component file)
 
 Plans:
-- [ ] `01-d3-chart-upgrade/01-01-PLAN.md` — Deps, spacing, hidden points, memoized simplex line, arrow marker defs + `marker-end`
-- [ ] `01-d3-chart-upgrade/01-02-PLAN.md` — Plot overlay, `d3.pointers` + bisector hover, full-height crosshair, highlight dot, `mouseleave` clears UI
-- [ ] `01-d3-chart-upgrade/01-03-PLAN.md` — `stroke-dasharray` / `stroke-dashoffset` line grow (800ms) on mount + `update(true)`; build verify
+- [ ] `01-d3-chart-upgrade-v1-0/01-01-PLAN.md` — CHART-01, CHART-03, CHART-05: hidden default points, memoized simplex line, marker defs + `marker-end`
+- [ ] `01-d3-chart-upgrade-v1-0/01-02-PLAN.md` — CHART-02: overlay, `d3.pointers` + nearest-year bisect, full-height crosshair, highlight + tooltip, pointer leave clears
+- [ ] `01-d3-chart-upgrade-v1-0/01-03-PLAN.md` — CHART-04, CHART-06: 800ms stroke-dash reveal + `nuxt generate` + browser console smokescreen
 
 ---
 
