@@ -1,0 +1,38 @@
+GDP chain-linking sanity report
+
+Roses-Wolf input: /Users/guillem/vault/projects/personal/ib-gdp-evolution/data/roseswolf_regionalgdp_v7.xlsx
+Eurostat input: Eurostat API (nama_10_pc / nama_10r_2gdp / demo_pjan)
+Correspondence file: not provided
+Eurostat unit label: CLV10_EUR_HAB (national); EUR_HAB regional INE proxy
+Eurostat unit values seen: CLV10_EUR_HAB, EUR_HAB
+
+Summary
+1) Seam continuity: PASS
+2) Growth rate preservation: PASS
+3) No missing years: PASS
+4) Coverage check: PASS
+5) Outlier check on growth rates: PASS
+6) Level plausibility: PASS
+7) Eurostat unit guard: PASS
+8) Baseline regression: WARN (1 issues)
+
+Details
+- 1) Seam continuity: PASS
+- 2) Growth rate preservation: PASS
+- 3) No missing years: PASS
+- 4) Coverage check: PASS
+  - intersection=22
+  - roseswolf_only=0
+  - eurostat_only=0
+- 5) Outlier check on growth rates: PASS
+- 6) Level plausibility: PASS
+- 7) Eurostat unit guard: PASS
+- 8) Baseline regression: WARN (1 issues)
+  - balearic_islands: corr=0.9361
+  - extremadura: corr=0.8703
+  - andalucia: corr=0.8731
+  - france: corr=-0.0482
+  - portugal: corr=-0.3189
+  - ireland: corr=-0.4305
+  - eu15_avg: corr=0.1537
+  - min=-0.4305, avg=0.2908

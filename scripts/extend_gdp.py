@@ -1060,27 +1060,22 @@ def materialize_roseswolf_workbook(workspace: Path, ine_inst: pd.DataFrame) -> P
     out_path = workspace / "data" / "roseswolf_regionalgdp_v7.xlsx"
     out_path.parent.mkdir(parents=True, exist_ok=True)
     base = _comparison_series_to_rw_rows(workspace)
-    es53 = base[base["nuts2_code"] == "ES53"]
-    es43 = base[base["nuts2_code"] == "ES43"]
-    reg2000 = {
-        "ES11": float(ine_inst[(ine_inst["ccaa_code"] == "ES11") & (ine_inst["year"] == 2000)]["value"].iloc[0]),
-        "ES42": float(ine_inst[(ine_inst["ccaa_code"] == "ES42") & (ine_inst["year"] == 2000)]["value"].iloc[0]),
-    }
-    s200 = float(base[(base["nuts2_code"] == "ES") & (base["year"] == 2000)]["value"].iloc[0])
-    reg2000["ES11"] = reg2000["ES11"] / s200 * es53[es53["year"] == 2000]["value"].iloc[0]  # re-scale to PPP via Spain ratio
-    # Fix: use INE ratio * Spain RW series
     sp = base[base["nuts2_code"] == "ES"]
-    ines = ine_inst[ine_inst["ccaa_code"] == "ES11"]
-    ines_2000 = float(ines[ines["year"] == 2000]["value"].iloc[0])
-    ines_sp = float(
-        ine_inst[(ine_inst["ccaa_code"] == "ES") & (ine_inst["year"] == 2000)]["value"].iloc[0]
-    ) if not ine_inst[ine_inst["ccaa_code"] == "ES"].empty else s200
-    ratio_11 = ines_2000 / ines_sp
-    r11 = sp.assign(value=sp["value"] * ratio_11, nuts2_code="ES11")
-    ines_42 = float(ine_inst[(ine_inst["ccaa_code"] == "ES42") & (ine_inst["year"] == 2000)]["value"].iloc[0])
-    ratio_42 = ines_42 / ines_sp
-    r42 = sp.assign(value=sp["value"] * ratio_42, nuts2_code="ES42")
-    gdp = pd.concat([base, r11, r42], ignore_index=True)
+    s200_rows = sp[sp["year"] == 2000]
+    s200 = float(s200_rows["value"].iloc[0]) if not s200_rows.empty else 1.0
+    spanish_codes = [s.rw_code for s in act2_series_list() if s.institutional == InstitutionalSource.ine]
+    missing_in_base = [c for c in spanish_codes if c not in set(base["nuts2_code"].unique())]
+    parts = [base]
+    for code in missing_in_base:
+        ine_rows = ine_inst[(ine_inst["ccaa_code"] == code) & (ine_inst["year"] == 2000)]
+        if ine_rows.empty:
+            continue
+        ratio = float(ine_rows["value"].iloc[0]) / (
+            float(ine_inst[(ine_inst["ccaa_code"] == "ES") & (ine_inst["year"] == 2000)]["value"].iloc[0])
+            if not ine_inst[ine_inst["ccaa_code"] == "ES"].empty else s200
+        )
+        parts.append(sp.assign(value=sp["value"] * ratio, nuts2_code=code))
+    gdp = pd.concat(parts, ignore_index=True)
     geos_nuts0 = [s.rw_code for s in act2_series_list() if s.scope == SeriesScope.nuts0]
     eur_nat = fetch_nama_10_pc_clv10(geos_nuts0)
     for g in geos_nuts0:
@@ -1270,6 +1265,41 @@ def load_ine_or_build_proxy(workspace: Path) -> pd.DataFrame:
         return build_ine_proxy_from_eurostat(workspace)
 
 
+def baseline_regression_check(
+    new_csvs: dict[str, pd.DataFrame],
+    workspace: Path,
+) -> CheckResult:
+    """Compare growth-rate correlation of new series vs existing local-proxy CSVs."""
+    correlations: list[float] = []
+    compared: list[str] = []
+    for slug, new_df in new_csvs.items():
+        proxy_path = workspace / "public" / "data" / f"act2_{slug}.csv"
+        if not proxy_path.exists():
+            continue
+        proxy = pd.read_csv(proxy_path)
+        common_years = sorted(set(new_df["year"].astype(int)) & set(proxy["year"].astype(int)))
+        if len(common_years) < 3:
+            continue
+        n = new_df[new_df["year"].astype(int).isin(common_years)].sort_values("year")
+        p = proxy[proxy["year"].astype(int).isin(common_years)].sort_values("year")
+        n_vals = pd.to_numeric(n["gdp_pc_2011ppp" if "gdp_pc_2011ppp" in n.columns else "gdp_pc"], errors="coerce")
+        p_vals = pd.to_numeric(p["gdp_pc"], errors="coerce")
+        n_growth = n_vals.pct_change().dropna()
+        p_growth = p_vals.pct_change().dropna()
+        if len(n_growth) > 1 and len(p_growth) > 1:
+            corr = float(n_growth.reset_index(drop=True).corr(p_growth.reset_index(drop=True)))
+            correlations.append(corr)
+            compared.append(f"{slug}: corr={corr:.4f}")
+    if not correlations:
+        return CheckResult("8) Baseline regression", "WARN", 1, ["No proxy CSVs found for comparison"])
+    min_corr = min(correlations)
+    avg_corr = sum(correlations) / len(correlations)
+    details = compared + [f"min={min_corr:.4f}, avg={avg_corr:.4f}"]
+    if min_corr >= 0.95:
+        return CheckResult("8) Baseline regression", "PASS", 0, details)
+    return CheckResult("8) Baseline regression", "WARN", 1, details)
+
+
 def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame], list[CheckResult], Path, dict[str, str]]:
     (workspace / "data").mkdir(parents=True, exist_ok=True)
     (workspace / "output").mkdir(parents=True, exist_ok=True)
@@ -1278,11 +1308,10 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
     ine = load_ine_or_build_proxy(workspace)
     try:
         rw_path = find_input_file(workspace, "roseswolf_regionalgdp_v7.xlsx")
+        rw = load_roseswolf(rw_path, anchor_year=anchor_year)
     except PipelineError:
         rw_path = materialize_roseswolf_workbook(workspace, ine)
-
-    rw = load_roseswolf(rw_path, anchor_year=anchor_year)
-    _ = load_roseswolf_population(rw_path)
+        rw = load_roseswolf(rw_path, anchor_year=anchor_year)
 
     # The checked-in workbook can be minimal; extend it with annualized comparison rows
     # and synthetic proxies so every Act II series has a pre-2000 base.
@@ -1392,6 +1421,8 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
     eu15_df = pd.DataFrame(agg_rows)
     out_slugs["eu15_avg"] = eu15_df
 
+    baseline = baseline_regression_check(out_slugs, workspace)
+
     unit = "2011 PPP dollars per inhabitant (chain-linked, Act II)"
     written: dict[str, str] = {}
     for slug, frame in out_slugs.items():
@@ -1430,6 +1461,7 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
         anchor_year=anchor_year,
         act2_mode=True,
     )
+    checks.append(baseline)
     report_p = workspace / "output" / "sanity_report_act2.txt"
     write_report(
         report_path=report_p,
