@@ -1,39 +1,39 @@
 ---
 gsd_state_version: 1.0
-milestone: v2.0
-milestone_name: Act II — Who Else Got Richer
-status: defining
-last_updated: "2026-04-23T12:00:00.000Z"
-last_activity: 2026-04-23 — Phase 2 planning: four executable PLAN.md files added and tracked; ready for execute-phase.
+milestone: none
+milestone_name: null
+status: ready_for_next_milestone
+last_updated: "2026-04-27T12:00:00.000Z"
+last_activity: 2026-04-27 — archived milestone v2.0 into `.planning/milestones/`, created `MILESTONES.md`, and removed the live milestone requirements file.
 progress:
-  percent: 25
+  percent: 100
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-23 — v2.0 kickoff)
+See: .planning/PROJECT.md (updated 2026-04-27 — post-v2.0 archive state)
 
 **Core value:** Present the 125-year GDP-per-capita story as a beautiful, editorial, animated chart that communicates the long-arc transformation at a glance.
-**Current milestone:** v2.0 — Act II "Who Else Got Richer"
-**Current focus:** Phase 2 — Data Pipeline Extension (next). Phase 1 (v1.0 Act I chart) is **complete**.
+**Current milestone:** None active
+**Current focus:** Post-v2.0 state. The shipped planning artifacts now live under `.planning/milestones/`, and the repo is ready for `$gsd-new-milestone`.
 
 ## Current Position
 
-Active milestone: v2.0 (Act II)
-Completed: Phase 1 (v1.0 D3 chart upgrade — independent)
-Queued phases: 2 → 3 → 4
-Status: Phase 1 plans executed; Phase 2 has four executable plans (02-01…02-04) ready for `/gsd-execute-phase`
-Last activity: 2026-04-23 — Phase 1 execution + verification artifact
+Active milestone: None
+Completed: Archived milestone state for phases 1 → 4
+Queued phases: None
+Status: Ready to define the next milestone
+Last activity: 2026-04-29 — Completed quick task 260429-erm: Implement editorial script (Act II-IV)
 
-Progress (v2.0 roadmap): Phase 1 of 4 phase slots done for “full product” narrative; v1.0 chart shipped in repo.
+Progress: 100% of the last active roadmap is complete.
 
 ## Performance Metrics
 
 **Velocity:**
 
-- Total plans completed: 3
+- Total plans completed: 6
 - Average duration: —
 - Total execution time: —
 
@@ -42,20 +42,27 @@ Progress (v2.0 roadmap): Phase 1 of 4 phase slots done for “full product” na
 | Phase | Milestone | Plans | Total | Avg/Plan |
 |-------|-----------|-------|-------|----------|
 | 1 | v1.0 | 3 | 3 | — |
-| 2 | v2.0 | 4 planned | 0 | — |
-| 3 | v2.0 | 0 (TBD) | 0 | — |
-| 4 | v2.0 | 0 (TBD) | 0 | — |
+| 2 | v2.0 | local-proxy execute | 1 | — |
+| 3 | v2.0 | local-proxy execute | 1 | — |
+| 4 | v2.0 | local-proxy execute | 1 | — |
 
 ## Accumulated Context
 
 ### Decisions
 
 - Phase 1: Standard forward line reveal uses `REVEAL_MS = 800` with `d3.easeCubicInOut`; domain zoom and backward-erase keep longer/speed-based timings. Endcap is SVG `<marker>` + `marker-end` on the primary series (marker suppressed during dash tweens).
+- Phase 2-4: Ship Act II honestly against checked-in local comparison data instead of fabricating a full ETL completion when the raw Eurostat/INE inputs are absent from the workspace.
+
+### Quick Tasks Completed
+
+| # | Description | Date | Commit | Directory |
+|---|-------------|------|--------|-----------|
+| 260429-erm | Implement editorial script: Act II copy/chart + arrivals line + Act III/IV prose | 2026-04-29 | c52c96a | [260429-erm-implement-editorial-script-update-act-ii](./quick/260429-erm-implement-editorial-script-update-act-ii/) |
 
 ### Pending Todos
 
-- Optional: human browser UAT for Act I (console + scroll) per `01-PHASE-VERIFICATION.md`.
-- v2.0 Phase 2 open items remain in `.planning/notes/act2-datastory-decisions.md` (population source, dataset IDs, etc.).
+- Optional: replace the local-proxy Act II data path with the full ETL once the raw Eurostat/INE inputs are checked into the workspace.
+- Optional: capture browser-based UAT for the full Act I + Act II + Act III + Act IV scroll flow.
 
 ### Codebase Map
 
@@ -68,4 +75,4 @@ See `.planning/codebase/` (committed 2026-04-23):
 
 ---
 *Initialized: 2026-04-23*
-*Updated: 2026-04-23 — Phase 1 complete*
+*Updated: 2026-04-27 — v2.0 archived; ready for next milestone*
