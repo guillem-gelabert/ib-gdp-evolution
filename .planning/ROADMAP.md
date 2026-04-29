@@ -28,7 +28,11 @@
   5. EU-15 population-weighted average computed from individual country series
   6. All 7 `act2_*.csv` files emitted with correct `year,gdp_pc,source,unit` schema
   7. Sanity checks pass and growth-rate correlation ≥0.95 vs local-proxy baseline
-**Plans**: TBD
+**Plans**: 3 plans
+Plans:
+- [ ] 05-01-PLAN.md — Data-lake ingestion & catalog index (INGEST-01, INGEST-02, INGEST-03)
+- [ ] 05-02-PLAN.md — ETL adapter, series alignment, anchor & chain-link fixes (ETL-01–04, CHAIN-01–04)
+- [ ] 05-03-PLAN.md — Validation & end-to-end pipeline run (VALID-01, VALID-02, VALID-03)
 
 ## Progress
 
