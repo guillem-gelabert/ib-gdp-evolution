@@ -1,159 +1,77 @@
 # Roadmap: IB GDP Evolution
 
-## Overview
+## Milestones
 
-**v1.0** (Phase 1) focuses on upgrading the D3 line chart in `app/components/line-chart.vue` with editorial, animated, and organic enhancements: hidden points, nearest-x bisect tooltip, Perlin-noise line distortion, smooth grow animation, and arrowhead terminator. One cohesive phase because all six requirements touch the same component and the same D3 update cycle.
-
-**v2.0** (Phases 2–4) implements the Act II datastory from `act2.md` — "Who Else Got Richer". The Balearic climb is placed alongside peer regions (Extremadura, Galicia, Castilla-La Mancha, Portugal, Ireland, Malta) and a weighted EU-15 reference, then the Y-axis switches from real € to "% of EU-15 average (EU-15 = 100)" in a held, scroll-choreographed moment. Phases split along clean seams: data (Python ETL extension) → chart (new Vue component with multi-line + dual-axis) → narrative (scrollytelling Steps 8–17).
+- ✅ **v1.0 Act I Chart Upgrade** — Phase 1 shipped 2026-04-23. Full shipped snapshot preserved in `.planning/milestones/v2.0-ROADMAP.md`.
+- ✅ **v2.0 Act II — Who Else Got Richer** — Phases 2-4 shipped 2026-04-23 in documented local-proxy mode. See `.planning/milestones/v2.0-ROADMAP.md`.
+- 🚧 **v3.0 Full Act II ETL** — Phases 5-8 (in progress)
 
 ## Phases
 
-**Phase Numbering:**
-- Integer phases (1, 2, 3, 4): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
-
-- [x] **Phase 1: D3 Chart Upgrade** — Hide points, nearest-x tooltip, Perlin-noise line, grow animation, arrowhead *(v1.0)*
-- [ ] **Phase 2: Data Pipeline Extension** — Extend `extend_gdp.py`: 2020 anchor, peer regions/countries, EU-15 weighted reference, regenerated IB *(v2.0)*
-- [ ] **Phase 3: Act II Chart Component** — New Vue component: multi-line, dual axis modes, animated axis transition, per-line state, annotations *(v2.0)*
-- [ ] **Phase 4: Act II Scrollytelling** — New scrollama scene, Steps 8–17 from `act2.md`, axis-switch choreography, editorial prose layout *(v2.0)*
+- [ ] **Phase 5: Data-Lake Ingestion & Catalog Index** - Ingest all required Eurostat datasets into data-lake and build the deterministic lookup index
+- [ ] **Phase 6: Data-Lake Adapter & Series Alignment** - Build the adapter layer that resolves Eurostat data from data-lake and align series specs with the frontend contract
+- [ ] **Phase 7: Chain-Linking & EU-15 Computation** - Wire the full chain-linking pipeline through the adapter and compute the EU-15 weighted average
+- [ ] **Phase 8: Sanity Suite & Baseline Regression** - Validate full-ETL output against existing checks and the local-proxy baseline
 
 ## Phase Details
 
-### Phase 1: D3 Chart Upgrade *(v1.0)*
+### 🚧 v3.0 Full Act II ETL (In Progress)
 
-**Goal**: Transform `app/components/line-chart.vue` into an editorial, organic, animated line chart with a nearest-x interaction model.
+**Milestone Goal:** Replace the `--act2-local-proxy` data path with a pipeline that sources Eurostat NAMA regional GDP from the data-lake MCP, chain-links with Rosés-Wolf, and emits the same `act2_*.csv` files.
 
-**UI hint**: yes
-
-**Depends on**: Nothing (first phase)
-
-**Requirements**: CHART-01, CHART-02, CHART-03, CHART-04, CHART-05, CHART-06
-
+#### Phase 5: Data-Lake Ingestion & Catalog Index
+**Goal**: All required Eurostat datasets are available locally in the data-lake with a deterministic catalog index
+**Depends on**: Nothing (first phase of v3.0)
+**Requirements**: INGEST-01, INGEST-02, INGEST-03
 **Success Criteria** (what must be TRUE):
-  1. No data-point circles are visible in the default rendered chart state.
-  2. Moving the cursor horizontally over the chart area always highlights exactly one point (the nearest year) with tooltip + crosshair; moving off the chart hides them.
-  3. The line path visibly deviates from a pure straight interpolation in a smooth, spatially coherent way (Perlin noise), reading as hand-drawn rather than jittery.
-  4. On mount and on each scrollama step change, the line animates as if being drawn progressively from start to end.
-  5. An arrowhead is visible at the most-recent-year end of the line, styled consistently with the line's color and stroke.
-  6. `nuxt generate` still succeeds and no console errors are thrown during scrollytelling interaction.
+  1. Pipeline can read Eurostat JSON-stat v2.0 artifacts from local data-lake paths without any live API calls
+  2. All ~20 required Eurostat sources are present in the data-lake across nama_10r_2gdp, nama_10_pc, and demo_pjan datasets
+  3. A static `datalake_eurostat_index.json` maps every required (dataset, geo, unit) triple to a data-lake source ID deterministically
+**Plans**: TBD
 
-**Plans**: 3 plans in 3 waves (sequential — same component file)
+#### Phase 6: Data-Lake Adapter & Series Alignment
+**Goal**: ETL pipeline reads Eurostat data through a unified adapter and targets the correct set of regions and countries matching the frontend
+**Depends on**: Phase 5
+**Requirements**: ETL-01, ETL-02, ETL-03, ETL-04
+**Success Criteria** (what must be TRUE):
+  1. `fetch_eurostat_series()` resolves data from data-lake first, falling back to live API only when a source is missing
+  2. `act2_series_list()` matches the 7 frontend CSV filenames exactly (balearic_islands, extremadura, andalucia, portugal, ireland, france, eu15_avg)
+  3. NUTS2 regions route through nama_10r_2gdp and countries route through nama_10_pc automatically
+  4. Greece geo-code normalization handles Eurostat EL vs Rosés-Wolf GR transparently
+**Plans**: TBD
 
-Plans:
-- [x] `01-d3-chart-upgrade-v1-0/01-01-PLAN.md` — CHART-01, CHART-03, CHART-05: hidden default points, memoized simplex line, marker defs + `marker-end`
-- [x] `01-d3-chart-upgrade-v1-0/01-02-PLAN.md` — CHART-02: overlay, `d3.pointers` + nearest-year bisect, full-height crosshair, highlight + tooltip, pointer leave clears
-- [x] `01-d3-chart-upgrade-v1-0/01-03-PLAN.md` — CHART-04, CHART-06: 800ms stroke-dash reveal + `nuxt generate` + browser console smokescreen
+#### Phase 7: Chain-Linking & EU-15 Computation
+**Goal**: Full chain-linking pipeline produces the 7 act2_*.csv files with correct historical splicing and EU-15 population-weighted average
+**Depends on**: Phase 6
+**Requirements**: CHAIN-01, CHAIN-02, CHAIN-03, CHAIN-04
+**Success Criteria** (what must be TRUE):
+  1. Spanish NUTS2 regions (ES53, ES43, ES61) use INE chain-linked volume data instead of Eurostat current-price data
+  2. EU-15 population-weighted average is computed from 15 individual country series
+  3. UK post-Brexit data gap is handled (fallback source or documented exclusion post-2020) without breaking the EU-15 average
+  4. Anchor year is 2019, avoiding COVID-year distortion
+  5. Running `extend_gdp.py` in full-ETL mode produces all 7 act2_*.csv files the frontend loads without error
+**Plans**: TBD
+
+#### Phase 8: Sanity Suite & Baseline Regression
+**Goal**: Full-ETL output is validated against existing sanity checks and the local-proxy baseline CSVs
+**Depends on**: Phase 7
+**Requirements**: VALID-01, VALID-02, VALID-03
+**Success Criteria** (what must be TRUE):
+  1. All 7 output CSVs preserve the `year,gdp_pc,source,unit` schema and the expected filenames
+  2. All existing sanity checks pass on full-ETL output without modification
+  3. Baseline regression test shows high growth-rate correlation (≥0.95) between full-ETL and local-proxy CSVs for each series
+**Plans**: TBD
+
+## Progress
+
+**Execution Order:** 5 → 6 → 7 → 8
+
+| Phase | Milestone | Plans Complete | Status | Completed |
+|-------|-----------|----------------|--------|-----------|
+| 5. Data-Lake Ingestion & Catalog Index | v3.0 | 0/? | Not started | - |
+| 6. Data-Lake Adapter & Series Alignment | v3.0 | 0/? | Not started | - |
+| 7. Chain-Linking & EU-15 Computation | v3.0 | 0/? | Not started | - |
+| 8. Sanity Suite & Baseline Regression | v3.0 | 0/? | Not started | - |
 
 ---
-
-### Phase 2: Data Pipeline Extension *(v2.0)*
-
-**Goal**: Extend `scripts/extend_gdp.py` to produce Act II per-series chain-linked per-capita GDP CSVs (2020 anchor) for IB + six peer series + a population-weighted EU-15 reference (`public/data/act2_*.csv`, schema `year,gdp_pc,source,unit`), all passing the existing sanity checks, without overwriting Act I’s `balearic_gdp_pc.csv` (per `02-CONTEXT.md` D-06–D-08).
-
-**UI hint**: no
-
-**Depends on**: Nothing (independent of Phase 1; can run in parallel with it)
-
-**Requirements**: DATA-01, DATA-02, DATA-03, DATA-04, DATA-05, DATA-06, DATA-07, DATA-08
-
-**Success Criteria** (what must be TRUE):
-  1. `extend_gdp.py` runs with `ANCHOR_YEAR=2020` (default) and emits one `public/data/act2_*.csv` per series: IB, Extremadura, Galicia, Castilla-La Mancha, Portugal, Ireland, Malta, and EU-15, each covering 1900–2024 with no unintended gaps (checks surface exceptions).
-  2. Every series passes the existing sanity checks: seam continuity at the anchor year, growth-rate preservation (post-CHAIN_START), no missing years, outlier guard (YoY within ±25% except 2020–2021), level plausibility (2024/2019 ratio in [0.5, 3.0]), and CLV unit guard on Eurostat inputs.
-  3. The EU-15 reference series is computed as `sum(per_capita_i × population_i) / sum(population_i)` over the 15 member countries per year, with population from RW (pre-2000) and Eurostat (2000+), per `02-CONTEXT.md` D-01–D-02 and `act2-datastory-decisions.md` §5.
-  4. Act I’s `balearic_gdp_pc.csv` (2022 anchor) remains unchanged; the 2020-anchor IB line for Act II is `act2_balearic_islands.csv` (or the slug locked in `02-CONTEXT.md`). Act I continues to use the original file.
-  5. A sanity report is written (same format as today) and every check is PASS or WARN-with-explanation — no FAILs.
-
-**Plans**: 4 plans in 4 waves (02-01 → 02-04)
-
-Plans:
-- [ ] `02-data-pipeline-extension-v2-0/02-01-PLAN.md` — DATA-01, DATA-02: anchor 2020, RW population loader, series identifier hooks
-- [ ] `02-data-pipeline-extension-v2-0/02-02-PLAN.md` — DATA-02, DATA-03, DATA-05: `load_ine_excel`, Spanish NUTS2+IB INE+RW chain-link
-- [ ] `02-data-pipeline-extension-v2-0/02-03-PLAN.md` — DATA-04, DATA-06: PT/IE/MT NUTS0, pop loaders, EU-15 weighted index
-- [ ] `02-data-pipeline-extension-v2-0/02-04-PLAN.md` — DATA-05, DATA-07, DATA-08: `act2_*.csv` emission, full sanity report, e2e verify
-
----
-
-### Phase 3: Act II Chart Component *(v2.0)*
-
-**Goal**: Build a new Vue/D3 component that renders the Act II multi-line chart with two axis modes and an animated scroll-driven transition between them, sharing visual language with Act I via extracted utilities.
-
-**UI hint**: yes
-
-**Depends on**: Phase 2 (needs the Act II `act2_*.csv` per-series assets). Independent of Phase 1 for shipping, but should consume shared utilities extracted from Phase 1's component.
-
-**Requirements**: ACT2-01, ACT2-02, ACT2-03, ACT2-04, ACT2-05, ACT2-06
-
-**Success Criteria** (what must be TRUE):
-  1. The component renders IB + 6 peer lines + EU-15 reference from the Phase 2 CSV, each with independently controllable visual state (active color, faded gray, hidden, highlighted).
-  2. Switching the `axisMode` prop from `real-eur` to `pct-eu15` animates in a single tween: the EU-15 line morphs to a horizontal y=100 line while all other lines re-scale to their percentage-of-EU-15 positions.
-  3. The reverse transition (`pct-eu15` → `real-eur`) is also animated and visually consistent.
-  4. The component reuses Act I's Perlin line distortion, arrowhead terminator, and editorial palette via shared utilities (imported, not duplicated).
-  5. A "peak" shaded annotation band (IB, ~1988–1993) and the y=100 reference line render as data-driven primitives, not hard-coded overlays.
-  6. `nuxt generate` succeeds with the new component included.
-
-**Plans**: TBD (finalized during `/gsd-plan-phase 3`)
-
----
-
-### Phase 4: Act II Scrollytelling *(v2.0)*
-
-**Goal**: Wire the Act II chart component into a new scrollama scene that executes Steps 8–17 from `act2.md`, including the held Step 13 axis transition, and ship the Act II prose alongside the chart in Act I's editorial style.
-
-**UI hint**: yes
-
-**Depends on**: Phase 3 (needs the component). Benefits from Phase 1 (shared editorial tokens/typography) but does not block on it.
-
-**Requirements**: STORY-01, STORY-02, STORY-03, STORY-04, STORY-05, STORY-06
-
-**Success Criteria** (what must be TRUE):
-  1. Act II renders as a new scene (separate from Act I's `story-page.vue`) with its own scrollama instance driving the new chart component.
-  2. All peer and EU-15 data is pre-loaded at mount (e.g. parallel `useFetch` on each `act2_*.csv` or one composed loader); no per-step fetches.
-  3. Scrolling through Steps 8–17 reproduces the narrative beats in `act2.md`: Extremadura fade-in, peer forest, axis switch, Balearic highlight climb across 100, 1990 peak + descent, peers continuing, IB isolated "hinge" close.
-  4. The Step 13 axis transition is a visibly held moment — noticeably longer dwell than surrounding steps — during which the EU-15 line flattens into y=100 while peers re-scale.
-  5. Prose for Steps 8–17 renders alongside the chart in the same editorial style as Act I (typography, palette, spacing).
-  6. `nuxt generate` succeeds and no console errors are thrown during a full scroll from Act I through Act II.
-
-**Plans**: TBD (finalized during `/gsd-plan-phase 4`)
-
-## Current State
-
-**Active Phase**: 2 (v2.0 — next; four plans: `02-01`…`02-04` in `02-data-pipeline-extension-v2-0/`)
-**Queued**: Phases 2 → 3 → 4 (v2.0; Phase 2 plans finalized — execute next)
-**Completed Phases**: Phase 1 (v1.0 D3 chart upgrade)
-
-## Traceability
-
-| Requirement | Phase | Status |
-|-------------|-------|--------|
-| CHART-01 | Phase 1 | Complete |
-| CHART-02 | Phase 1 | Complete |
-| CHART-03 | Phase 1 | Complete |
-| CHART-04 | Phase 1 | Complete |
-| CHART-05 | Phase 1 | Complete |
-| CHART-06 | Phase 1 | Complete |
-| DATA-01  | Phase 2 | Pending |
-| DATA-02  | Phase 2 | Pending |
-| DATA-03  | Phase 2 | Pending |
-| DATA-04  | Phase 2 | Pending |
-| DATA-05  | Phase 2 | Pending |
-| DATA-06  | Phase 2 | Pending |
-| DATA-07  | Phase 2 | Pending |
-| DATA-08  | Phase 2 | Pending |
-| ACT2-01  | Phase 3 | Pending |
-| ACT2-02  | Phase 3 | Pending |
-| ACT2-03  | Phase 3 | Pending |
-| ACT2-04  | Phase 3 | Pending |
-| ACT2-05  | Phase 3 | Pending |
-| ACT2-06  | Phase 3 | Pending |
-| STORY-01 | Phase 4 | Pending |
-| STORY-02 | Phase 4 | Pending |
-| STORY-03 | Phase 4 | Pending |
-| STORY-04 | Phase 4 | Pending |
-| STORY-05 | Phase 4 | Pending |
-| STORY-06 | Phase 4 | Pending |
-
-**Coverage:** 26/26 requirements mapped. ✓
-
----
-*Roadmap created: 2026-04-23*
-*Updated: 2026-04-23 — Phase 1 executed (3/3 plans); Phase 2 plans added (4/4); v2.0 Act II pipeline execute-ready*
+*Roadmap created: 2026-04-29 for v3.0 Full Act II ETL*

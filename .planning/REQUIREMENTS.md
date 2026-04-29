@@ -54,26 +54,26 @@ Requirements for milestone v3.0: Full Act II ETL. Each maps to roadmap phases.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INGEST-01 | TBD | Pending |
-| INGEST-02 | TBD | Pending |
-| INGEST-03 | TBD | Pending |
-| ETL-01 | TBD | Pending |
-| ETL-02 | TBD | Pending |
-| ETL-03 | TBD | Pending |
-| ETL-04 | TBD | Pending |
-| CHAIN-01 | TBD | Pending |
-| CHAIN-02 | TBD | Pending |
-| CHAIN-03 | TBD | Pending |
-| CHAIN-04 | TBD | Pending |
-| VALID-01 | TBD | Pending |
-| VALID-02 | TBD | Pending |
-| VALID-03 | TBD | Pending |
+| INGEST-01 | Phase 5 | Pending |
+| INGEST-02 | Phase 5 | Pending |
+| INGEST-03 | Phase 5 | Pending |
+| ETL-01 | Phase 6 | Pending |
+| ETL-02 | Phase 6 | Pending |
+| ETL-03 | Phase 6 | Pending |
+| ETL-04 | Phase 6 | Pending |
+| CHAIN-01 | Phase 7 | Pending |
+| CHAIN-02 | Phase 7 | Pending |
+| CHAIN-03 | Phase 7 | Pending |
+| CHAIN-04 | Phase 7 | Pending |
+| VALID-01 | Phase 8 | Pending |
+| VALID-02 | Phase 8 | Pending |
+| VALID-03 | Phase 8 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 14 total
-- Mapped to phases: 0 (pending roadmap)
-- Unmapped: 14
+- Mapped to phases: 14/14 ✓
+- Unmapped: 0
 
 ---
 *Requirements defined: 2026-04-29*
-*Last updated: 2026-04-29 after initial definition*
+*Last updated: 2026-04-29 after roadmap creation*
