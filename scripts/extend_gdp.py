@@ -90,24 +90,24 @@ def act2_series_list() -> list[Act2SeriesSpec]:
             label="Extremadura",
         ),
         Act2SeriesSpec(
-            key="galicia",
-            slug="galicia",
+            key="an",
+            slug="andalucia",
             scope=SeriesScope.nuts2,
-            rw_code="ES11",
-            ine_ccaa="ES11",
-            euro_geo="ES11",
+            rw_code="ES61",
+            ine_ccaa="ES61",
+            euro_geo="ES61",
             institutional=InstitutionalSource.ine,
-            label="Galicia",
+            label="Andalucia",
         ),
         Act2SeriesSpec(
-            key="clm",
-            slug="castilla_la_mancha",
-            scope=SeriesScope.nuts2,
-            rw_code="ES42",
-            ine_ccaa="ES42",
-            euro_geo="ES42",
-            institutional=InstitutionalSource.ine,
-            label="Castilla-La Mancha",
+            key="fr",
+            slug="france",
+            scope=SeriesScope.nuts0,
+            rw_code="FR",
+            ine_ccaa=None,
+            euro_geo="FR",
+            institutional=InstitutionalSource.eurostat,
+            label="France",
         ),
         Act2SeriesSpec(
             key="pt",
@@ -128,16 +128,6 @@ def act2_series_list() -> list[Act2SeriesSpec]:
             euro_geo="IE",
             institutional=InstitutionalSource.eurostat,
             label="Ireland",
-        ),
-        Act2SeriesSpec(
-            key="mt",
-            slug="malta",
-            scope=SeriesScope.nuts0,
-            rw_code="MT",
-            ine_ccaa=None,
-            euro_geo="MT",
-            institutional=InstitutionalSource.eurostat,
-            label="Malta",
         ),
     ]
 
@@ -971,6 +961,7 @@ def _comparison_series_to_rw_rows(workspace: Path) -> pd.DataFrame:
     name_to_code = {
         "Balearic Islands": "ES53",
         "Extremadura": "ES43",
+        "Andalucia": "ES61",
         "Spain avg": "ES",
         "Portugal avg": "PT",
         "Ireland avg": "IE",
@@ -1260,7 +1251,8 @@ def build_ine_proxy_from_eurostat(workspace: Path) -> pd.DataFrame:
     Re-export of Spanish NUTS2 + national ES in EUR per hab (current) as INE stand-in
     when the INE xlsx is not present (regional `nama_10r_2gdp` is current prices only).
     """
-    reg = fetch_nama_10r_2gdp_eur_hab(["ES53", "ES43", "ES11", "ES42"])
+    spanish_codes = [s.rw_code for s in act2_series_list() if s.institutional == InstitutionalSource.ine]
+    reg = fetch_nama_10r_2gdp_eur_hab(spanish_codes)
     reg = reg.rename(columns={"nuts2_code": "ccaa_code"})
     nat = fetch_nama_10_pc_clv10_range(["ES"], CHAIN_START, YEAR_MAX)
     nat = nat.rename(columns={"nuts2_code": "ccaa_code"})
@@ -1350,6 +1342,18 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
     except PipelineError:
         pop_eu = fetch_demo_pjan_nuts0(list(EU15_EUROSTAT_GEOS))
     pop_filled = _fill_population_backward(pop_eu)
+    uk_carry_from: int | None = None
+    uk_e15 = e15_euro[e15_euro["nuts2_code"] == "UK"]
+    if not uk_e15.empty:
+        max_uk_year = int(uk_e15["year"].max())
+        if max_uk_year < YEAR_MAX:
+            uk_carry_from = max_uk_year
+            last_val = float(uk_e15.loc[uk_e15["year"] == max_uk_year, "value"].iloc[0])
+            carry_rows = pd.DataFrame([
+                {"nuts2_code": "UK", "year": y, "value": last_val}
+                for y in range(max_uk_year + 1, YEAR_MAX + 1)
+            ])
+            e15_euro = pd.concat([e15_euro, carry_rows], ignore_index=True)
     out_by_g: dict[str, pd.DataFrame] = {}
     g_by: dict[str, pd.DataFrame] = {}
     for g in EU15_EUROSTAT_GEOS:
@@ -1359,6 +1363,8 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
         )
         out_by_g[g] = o
         g_by[g] = gc
+    if uk_carry_from is not None and "UK" in out_by_g:
+        out_by_g["UK"].loc[out_by_g["UK"]["year"] > uk_carry_from, "source"] = "carry_forward"
     agg_rows: list[dict] = []
     for y in range(YEAR_MIN, YEAR_MAX + 1):
         num = 0.0
@@ -1528,6 +1534,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         action="store_true",
         help="Write Act II comparison CSVs from the checked-in local proxy data already in the repo.",
     )
+    parser.add_argument(
+        "--act2-datalake",
+        action="store_true",
+        help="Run Act II ETL sourcing Eurostat data from data-lake artifacts (anchor 2019).",
+    )
     return parser.parse_args(argv)
 
 
@@ -1541,6 +1552,22 @@ def main() -> None:
         for slug, relpath in written.items():
             print(f"Act II proxy: {slug} -> {relpath}")
         print(f"Wrote: {report_path}")
+        return
+
+    if args.act2_datalake:
+        global _datalake_index, _datalake_root
+        idx_path = workspace / "scripts" / "datalake_eurostat_index.json"
+        if idx_path.exists():
+            _datalake_index = load_datalake_index(idx_path)
+            meta = json.loads(idx_path.read_text(encoding="utf-8"))
+            _datalake_root = Path(meta.get("_meta", {}).get("datalake_root", ""))
+        anchor = args.anchor_year if args.anchor_year != ANCHOR_YEAR else 2019
+        out_slugs, checks, report_path, written = run_act2(workspace, anchor)
+        for slug, relpath in written.items():
+            print(f"Act II datalake: {slug} -> {relpath}")
+        print(f"Wrote: {report_path}")
+        _datalake_index = None
+        _datalake_root = None
         return
 
     rw_path = args.rw_path.resolve() if args.rw_path else find_input_file(workspace, "roseswolf_regionalgdp_v7.xlsx")
