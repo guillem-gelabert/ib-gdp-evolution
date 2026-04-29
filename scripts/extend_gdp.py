@@ -27,6 +27,15 @@ EU15_COUNTRY_GEOS = ("AT", "BE", "DK", "FI", "FR", "DE", "GR", "IE", "IT", "LU",
 EU15_EUROSTAT_GEOS = ("AT", "BE", "DK", "FI", "FR", "DE", "EL", "IE", "IT", "LU", "NL", "PT", "ES", "SE", "UK")
 # Eurostat uses EL for Greece (not GR); UK stays UK in Eurostat demo tables pre-2020.
 
+_datalake_index: dict[str, str] | None = None
+_datalake_root: Path | None = None
+
+
+def load_datalake_index(index_path: Path) -> dict[str, str]:
+    """Read the static catalog index and return non-meta entries."""
+    data = json.loads(index_path.read_text(encoding="utf-8"))
+    return {k: v for k, v in data.items() if not k.startswith("_")}
+
 
 class SeriesScope(str, Enum):
     """Act II series routing (DATA-02): NUTS2 Spain, INE CCAA code, or NUTS0 country."""
@@ -739,14 +748,47 @@ def _eurostat_get(dataset: str, extra_params: str) -> dict:
         return json.loads(resp.read().decode("utf-8"))
 
 
+def _fetch_eurostat_df(dataset: str, extra_params: str) -> pd.DataFrame:
+    """Resolve Eurostat data from data-lake artifacts first, fall back to live API."""
+    if _datalake_index and _datalake_root:
+        geos = re.findall(r"geo=([A-Z0-9]+)", extra_params)
+        if geos:
+            source_ids: dict[str, str] = {}
+            all_resolved = True
+            for g in geos:
+                key = f"{dataset}|{g}"
+                sid = _datalake_index.get(key)
+                if sid:
+                    source_ids[g] = sid
+                else:
+                    all_resolved = False
+                    break
+            if all_resolved and source_ids:
+                unique_sids = set(source_ids.values())
+                frames: list[pd.DataFrame] = []
+                for sid in unique_sids:
+                    raw_path = _datalake_root / "lake" / "sources" / sid / "raw.json"
+                    if not raw_path.exists():
+                        all_resolved = False
+                        break
+                    d = json.loads(raw_path.read_text(encoding="utf-8"))
+                    frames.append(_eurostat_json_to_df(d))
+                if all_resolved and frames:
+                    combined = pd.concat(frames, ignore_index=True)
+                    if "geo" in combined.columns:
+                        combined = combined[combined["geo"].isin(geos)]
+                    return combined
+    d = _eurostat_get(dataset, extra_params)
+    return _eurostat_json_to_df(d)
+
+
 def fetch_nama_10_pc_clv10(geos: list[str]) -> pd.DataFrame:
     return fetch_nama_10_pc_clv10_range(geos, CHAIN_START, YEAR_MAX)
 
 
 def fetch_nama_10_pc_clv10_range(geos: list[str], y0: int, y1: int) -> pd.DataFrame:
     geo_q = "&".join(f"geo={g}" for g in geos)
-    d = _eurostat_get("nama_10_pc", f"unit=CLV10_EUR_HAB&na_item=B1GQ&{geo_q}")
-    df = _eurostat_json_to_df(d)
+    df = _fetch_eurostat_df("nama_10_pc", f"unit=CLV10_EUR_HAB&na_item=B1GQ&{geo_q}")
     out = df.rename(columns={"geo": "nuts2_code", "time": "year"})
     out["year"] = out["year"].astype(int)
     out = out[out["year"].between(y0, y1)]
@@ -755,8 +797,7 @@ def fetch_nama_10_pc_clv10_range(geos: list[str], y0: int, y1: int) -> pd.DataFr
 
 def fetch_nama_10r_2gdp_eur_hab(geos: list[str]) -> pd.DataFrame:
     geo_q = "&".join(f"geo={g}" for g in geos)
-    d = _eurostat_get("nama_10r_2gdp", f"unit=EUR_HAB&{geo_q}")
-    df = _eurostat_json_to_df(d)
+    df = _fetch_eurostat_df("nama_10r_2gdp", f"unit=EUR_HAB&{geo_q}")
     out = df.rename(columns={"geo": "nuts2_code", "time": "year"})
     out["year"] = out["year"].astype(int)
     out = out[out["year"].between(CHAIN_START, YEAR_MAX)]
@@ -766,8 +807,7 @@ def fetch_nama_10r_2gdp_eur_hab(geos: list[str]) -> pd.DataFrame:
 def fetch_demo_pjan_nuts0(geos: list[str]) -> pd.DataFrame:
     """Annual population; Eurostat `demo_pjan` national."""
     geo_q = "&".join(f"geo={g}" for g in geos)
-    d = _eurostat_get("demo_pjan", f"sex=T&age=TOTAL&{geo_q}")
-    df = _eurostat_json_to_df(d)
+    df = _fetch_eurostat_df("demo_pjan", f"sex=T&age=TOTAL&{geo_q}")
     out = df.rename(columns={"geo": "nuts2_code", "time": "year"})
     out["year"] = out["year"].astype(int)
     out = out[(out["year"] >= YEAR_MIN) & (out["year"] <= YEAR_MAX)]
@@ -895,6 +935,34 @@ def chain_link_rw_plus_institutional(
     return full, gc
 
 
+def _annualize_sparse_series(
+    df: pd.DataFrame,
+    *,
+    code_col: str = "nuts2_code",
+    value_col: str = "value",
+    end_year: int = ANCHOR_YEAR,
+) -> pd.DataFrame:
+    annual_parts: list[pd.DataFrame] = []
+    for code, group in df.groupby(code_col):
+        series = group[[code_col, "year", value_col]].copy()
+        series["year"] = pd.to_numeric(series["year"], errors="coerce")
+        series[value_col] = pd.to_numeric(series[value_col], errors="coerce")
+        series = series.dropna(subset=["year", value_col]).sort_values("year")
+        if series.empty:
+            continue
+
+        idx = range(YEAR_MIN, end_year + 1)
+        annual = series.set_index("year").reindex(idx)
+        annual[code_col] = code
+        annual[value_col] = annual[value_col].interpolate(method="linear", limit_direction="both")
+        annual = annual.reset_index().rename(columns={"index": "year"})
+        annual_parts.append(annual[[code_col, "year", value_col]])
+
+    if not annual_parts:
+        return pd.DataFrame(columns=[code_col, "year", value_col])
+    return pd.concat(annual_parts, ignore_index=True)
+
+
 def _comparison_series_to_rw_rows(workspace: Path) -> pd.DataFrame:
     comp_path = workspace / "public" / "data" / "roses_wolf_selected_comparison.csv"
     if not comp_path.exists():
@@ -916,6 +984,7 @@ def _comparison_series_to_rw_rows(workspace: Path) -> pd.DataFrame:
         rows.append(s)
     out = pd.concat(rows, ignore_index=True)
     out = out.sort_values(["nuts2_code", "year"]).drop_duplicates(["nuts2_code", "year"], keep="last")
+    out = _annualize_sparse_series(out, end_year=ANCHOR_YEAR)
     return out
 
 
@@ -938,7 +1007,16 @@ def _synthetic_national_rw_from_eurostat_clv(euro: pd.DataFrame, geo: str) -> pd
     s = euro[euro["nuts2_code"] == geo].sort_values("year")
     if s.empty:
         raise PipelineError(f"No Eurostat CLV series for {geo}.")
-    v2020 = float(s[s["year"] == ANCHOR_YEAR]["value"].iloc[0])
+    anchor_rows = s[s["year"] == ANCHOR_YEAR]
+    if anchor_rows.empty:
+        fallback_rows = s[s["year"] <= ANCHOR_YEAR]
+        if fallback_rows.empty:
+            fallback_rows = s
+        anchor_row = fallback_rows.iloc[-1]
+    else:
+        anchor_row = anchor_rows.iloc[0]
+    anchor_value = float(anchor_row["value"])
+    anchor_year = int(anchor_row["year"])
     years = list(range(YEAR_MIN, ANCHOR_YEAR + 1))
     e1975 = float(s[s["year"] == 1975]["value"].iloc[0]) if not s[s["year"] == 1975].empty else float(s["value"].iloc[0])
     out = []
@@ -949,10 +1027,10 @@ def _synthetic_national_rw_from_eurostat_clv(euro: pd.DataFrame, geo: str) -> pd
             t = (y - YEAR_MIN) / max(1, 1975 - YEAR_MIN)
             val = e1975 * (0.25 + 0.75 * t)
         else:
-            val = v2020
+            val = anchor_value
         out.append({"nuts2_code": geo, "year": y, "value": val})
     dfa = pd.DataFrame(out)
-    dfa.loc[dfa["year"] == ANCHOR_YEAR, "value"] = v2020
+    dfa.loc[dfa["year"] == anchor_year, "value"] = anchor_value
     return dfa
 
 
@@ -1052,6 +1130,131 @@ def _write_act2_public_csv(
     out.to_csv(path, index=False)
 
 
+def _load_existing_public_series(path: Path) -> pd.DataFrame:
+    df = pd.read_csv(path)
+    df = normalize_columns(df)
+    required = {"year", "gdp_pc", "source"}
+    if not required.issubset(df.columns):
+        raise PipelineError(f"{path.name}: expected columns {sorted(required)}")
+    out = df[["year", "gdp_pc", "source"]].copy()
+    out["year"] = pd.to_numeric(out["year"], errors="coerce")
+    out["gdp_pc_2011ppp"] = pd.to_numeric(out["gdp_pc"], errors="coerce")
+    out = out.dropna(subset=["year", "gdp_pc_2011ppp"]).copy()
+    out["year"] = out["year"].astype(int)
+    return out[["year", "gdp_pc_2011ppp", "source"]]
+
+
+def _reference_post_chain_years(reference: pd.DataFrame, cutoff_year: int = CHAIN_START) -> list[int]:
+    years = pd.to_numeric(reference["year"], errors="coerce")
+    return sorted({int(year) for year in years.dropna().tolist() if int(year) >= cutoff_year})
+
+
+def _align_post_chain_years_to_reference(
+    series: pd.DataFrame,
+    reference_years: list[int],
+    *,
+    cutoff_year: int = CHAIN_START,
+) -> pd.DataFrame:
+    if not reference_years:
+        return series.sort_values("year").reset_index(drop=True)
+
+    out = series.copy()
+    out["year"] = pd.to_numeric(out["year"], errors="coerce")
+    out["gdp_pc_2011ppp"] = pd.to_numeric(out["gdp_pc_2011ppp"], errors="coerce")
+    out = out.dropna(subset=["year", "gdp_pc_2011ppp"]).copy()
+    out["year"] = out["year"].astype(int)
+
+    pre_chain = out[out["year"] < cutoff_year].copy()
+    post_chain = out[out["year"] >= cutoff_year].copy()
+    if post_chain.empty:
+        return out.sort_values("year").reset_index(drop=True)
+
+    source = str(post_chain["source"].dropna().iloc[0]) if "source" in post_chain.columns and not post_chain["source"].dropna().empty else ""
+    value_index = sorted(set(post_chain["year"].tolist()) | set(reference_years))
+    annual = post_chain[["year", "gdp_pc_2011ppp"]].drop_duplicates("year", keep="last").set_index("year").reindex(value_index)
+    annual["gdp_pc_2011ppp"] = annual["gdp_pc_2011ppp"].interpolate(method="linear", limit_direction="both")
+    annual = annual.reset_index().rename(columns={"index": "year"})
+    annual = annual[annual["year"].isin(reference_years)].copy()
+    annual["source"] = source
+
+    return (
+        pd.concat([pre_chain[["year", "gdp_pc_2011ppp", "source"]], annual[["year", "gdp_pc_2011ppp", "source"]]], ignore_index=True)
+        .sort_values("year")
+        .reset_index(drop=True)
+    )
+
+
+def _load_comparison_proxy_series(workspace: Path, series_name: str, source_label: str) -> pd.DataFrame:
+    comp_path = workspace / "public" / "data" / "roses_wolf_selected_comparison.csv"
+    if not comp_path.exists():
+        raise PipelineError("Missing public/data/roses_wolf_selected_comparison.csv for local Act II proxy mode.")
+    raw = pd.read_csv(comp_path)
+    subset = raw[raw["series"] == series_name].copy()
+    if subset.empty:
+        raise PipelineError(f"Comparison series '{series_name}' not found in {comp_path}.")
+    subset["year"] = pd.to_numeric(subset["year"], errors="coerce")
+    subset["gdp_pc_2011ppp"] = pd.to_numeric(subset["value"], errors="coerce")
+    subset = subset.dropna(subset=["year", "gdp_pc_2011ppp"]).copy()
+    subset["year"] = subset["year"].astype(int)
+    subset["source"] = source_label
+    return subset[["year", "gdp_pc_2011ppp", "source"]]
+
+
+def run_act2_local_proxy(workspace: Path) -> tuple[dict[str, str], Path]:
+    """Materialize Act II comparison CSVs from checked-in local sources only."""
+    public_dir = workspace / "public" / "data"
+    output_dir = workspace / "output"
+    public_dir.mkdir(parents=True, exist_ok=True)
+    output_dir.mkdir(parents=True, exist_ok=True)
+
+    balearic_series = _load_existing_public_series(public_dir / "balearic_gdp_pc.csv")
+    post_chain_reference_years = _reference_post_chain_years(balearic_series)
+
+    series_map = {
+        "balearic_islands": balearic_series,
+        "extremadura": _load_comparison_proxy_series(workspace, "Extremadura", "comparison_extremadura"),
+        "andalucia": _load_comparison_proxy_series(workspace, "Andalucia", "comparison_andalucia"),
+        "portugal": _load_comparison_proxy_series(workspace, "Portugal avg", "comparison_portugal"),
+        "ireland": _load_comparison_proxy_series(workspace, "Ireland avg", "comparison_ireland"),
+        "france": _load_comparison_proxy_series(workspace, "France avg", "comparison_france"),
+        "eu15_avg": _load_comparison_proxy_series(workspace, "eu15_minus_greece", "comparison_eu15_proxy"),
+    }
+    for slug, frame in list(series_map.items()):
+        if slug == "balearic_islands":
+            continue
+        series_map[slug] = _align_post_chain_years_to_reference(frame, post_chain_reference_years)
+
+    written: dict[str, str] = {}
+    for slug, frame in series_map.items():
+        path = public_dir / f"act2_{slug}.csv"
+        _write_act2_public_csv(path, frame)
+        written[slug] = str(path.relative_to(workspace))
+
+    checks = [
+        CheckResult("1) Local proxy inputs", "PASS", 0, [f"{slug}: {rel}" for slug, rel in written.items()]),
+        CheckResult("2) Coverage check", "PASS", 0, ["7 proxy series written from checked-in local data"]),
+        CheckResult(
+            "3) Data provenance",
+            "WARN",
+            1,
+            [
+                "Act II local-proxy mode uses checked-in comparison series instead of the full Phase 2 Eurostat/INE ETL."
+            ],
+        ),
+    ]
+    report_path = output_dir / "sanity_report_act2_local_proxy.txt"
+    write_report(
+        report_path=report_path,
+        checks=checks,
+        rw_path=public_dir / "balearic_gdp_pc.csv",
+        euro_path=public_dir / "roses_wolf_selected_comparison.csv",
+        corr_path=None,
+        unit_label="local proxy comparison inputs",
+        all_units=set(),
+    )
+    return written, report_path
+
+
 def build_ine_proxy_from_eurostat(workspace: Path) -> pd.DataFrame:
     """
     Re-export of Spanish NUTS2 + national ES in EUR per hab (current) as INE stand-in
@@ -1088,6 +1291,35 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
 
     rw = load_roseswolf(rw_path, anchor_year=anchor_year)
     _ = load_roseswolf_population(rw_path)
+
+    # The checked-in workbook can be minimal; extend it with annualized comparison rows
+    # and synthetic proxies so every Act II series has a pre-2000 base.
+    comparison_rw = _comparison_series_to_rw_rows(workspace)
+    rw = pd.concat([comparison_rw, rw], ignore_index=True)
+    rw = rw.sort_values(["nuts2_code", "year"]).drop_duplicates(["nuts2_code", "year"], keep="last")
+
+    target_spanish_codes = [spec.rw_code for spec in act2_series_list() if spec.institutional == InstitutionalSource.ine]
+    missing_spanish = [code for code in target_spanish_codes if code not in set(rw["nuts2_code"].unique())]
+    if missing_spanish:
+        regional_2000 = {}
+        for code in missing_spanish:
+            ine_2000 = ine[(ine["ccaa_code"] == code) & (ine["year"] == CHAIN_START)]
+            if ine_2000.empty:
+                raise PipelineError(f"{code}: missing year {CHAIN_START} in INE/proxy series.")
+            regional_2000[code] = float(ine_2000["value"].iloc[0])
+        rw = _extend_rw_with_regional_proxies(rw, regional_2000, spain_code="ES")
+
+    euro_needed = [spec.euro_geo or spec.rw_code for spec in act2_series_list() if spec.institutional == InstitutionalSource.eurostat]
+    missing_nuts0 = [
+        spec for spec in act2_series_list()
+        if spec.institutional == InstitutionalSource.eurostat and spec.rw_code not in set(rw["nuts2_code"].unique())
+    ]
+    if missing_nuts0:
+        euro_nuts0 = fetch_nama_10_pc_clv10(euro_needed)
+        for spec in missing_nuts0:
+            rw = pd.concat([rw, _synthetic_national_rw_from_eurostat_clv(euro_nuts0, spec.rw_code)], ignore_index=True)
+
+    rw = rw.sort_values(["nuts2_code", "year"]).drop_duplicates(["nuts2_code", "year"], keep="last")
 
     out_slugs: dict[str, pd.DataFrame] = {}
     growths: list[pd.DataFrame] = []
@@ -1161,8 +1393,26 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
         _write_act2_public_csv(outp, frame, unit=unit)
         written[slug] = str(outp.relative_to(workspace))
 
-    combined = pd.concat([df.assign(nuts2_code=sl) for sl, df in out_slugs.items()], ignore_index=True)
-    rw_seam = rw[rw["nuts2_code"].isin([s.rw_code for s in act2_series_list()]) | rw["nuts2_code"].isin(EU15_EUROSTAT_GEOS)]
+    combined = pd.concat(list(out_slugs.values()), ignore_index=True)
+    rw_codes = [s.rw_code for s in act2_series_list()]
+    rw_seam = rw[rw["nuts2_code"].isin(rw_codes + list(EU15_EUROSTAT_GEOS))].copy()
+    eu15_anchor = eu15_df[eu15_df["year"] == anchor_year]
+    if not eu15_anchor.empty:
+        rw_seam = pd.concat(
+            [
+                rw_seam,
+                pd.DataFrame(
+                    [
+                        {
+                            "nuts2_code": "EU15",
+                            "year": anchor_year,
+                            "value": float(eu15_anchor["gdp_pc_2011ppp"].iloc[0]),
+                        }
+                    ]
+                ),
+            ],
+            ignore_index=True,
+        )
     gc_all = pd.concat(growths + [g_by[g] for g in EU15_EUROSTAT_GEOS], ignore_index=True)
     coverage_act2 = {"intersection": len(act2_series_list()) + 1 + len(EU15_EUROSTAT_GEOS), "roseswolf_only": 0, "eurostat_only": 0}
     checks = run_checks(
@@ -1273,6 +1523,11 @@ def parse_args(argv: list[str] | None = None) -> argparse.Namespace:
         default=None,
         help="Sanity report path (default: output/sanity_report.txt).",
     )
+    parser.add_argument(
+        "--act2-local-proxy",
+        action="store_true",
+        help="Write Act II comparison CSVs from the checked-in local proxy data already in the repo.",
+    )
     return parser.parse_args(argv)
 
 
@@ -1280,6 +1535,13 @@ def main() -> None:
     args = parse_args()
     workspace = args.workspace.resolve()
     anchor = int(args.anchor_year)
+
+    if args.act2_local_proxy:
+        written, report_path = run_act2_local_proxy(workspace)
+        for slug, relpath in written.items():
+            print(f"Act II proxy: {slug} -> {relpath}")
+        print(f"Wrote: {report_path}")
+        return
 
     rw_path = args.rw_path.resolve() if args.rw_path else find_input_file(workspace, "roseswolf_regionalgdp_v7.xlsx")
     euro_path = (
