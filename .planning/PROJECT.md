@@ -90,4 +90,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-29 — started milestone v3.0 Full Act II ETL*
+*Last updated: 2026-04-29 — Phase 5 complete: full Act II ETL replaces local-proxy with data-lake pipeline*
