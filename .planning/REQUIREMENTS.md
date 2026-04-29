@@ -57,17 +57,17 @@ Requirements for milestone v3.0: Full Act II ETL. Each maps to roadmap phases.
 | INGEST-01 | Phase 5 | Pending |
 | INGEST-02 | Phase 5 | Pending |
 | INGEST-03 | Phase 5 | Pending |
-| ETL-01 | Phase 6 | Pending |
-| ETL-02 | Phase 6 | Pending |
-| ETL-03 | Phase 6 | Pending |
-| ETL-04 | Phase 6 | Pending |
-| CHAIN-01 | Phase 7 | Pending |
-| CHAIN-02 | Phase 7 | Pending |
-| CHAIN-03 | Phase 7 | Pending |
-| CHAIN-04 | Phase 7 | Pending |
-| VALID-01 | Phase 8 | Pending |
-| VALID-02 | Phase 8 | Pending |
-| VALID-03 | Phase 8 | Pending |
+| ETL-01 | Phase 5 | Pending |
+| ETL-02 | Phase 5 | Pending |
+| ETL-03 | Phase 5 | Pending |
+| ETL-04 | Phase 5 | Pending |
+| CHAIN-01 | Phase 5 | Pending |
+| CHAIN-02 | Phase 5 | Pending |
+| CHAIN-03 | Phase 5 | Pending |
+| CHAIN-04 | Phase 5 | Pending |
+| VALID-01 | Phase 5 | Pending |
+| VALID-02 | Phase 5 | Pending |
+| VALID-03 | Phase 5 | Pending |
 
 **Coverage:**
 - v3.0 requirements: 14 total
