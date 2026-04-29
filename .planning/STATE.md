@@ -1,31 +1,30 @@
 ---
 gsd_state_version: 1.0
-milestone: none
-milestone_name: null
-status: ready_for_next_milestone
-last_updated: "2026-04-27T12:00:00.000Z"
-last_activity: 2026-04-27 — archived milestone v2.0 into `.planning/milestones/`, created `MILESTONES.md`, and removed the live milestone requirements file.
+milestone: v3.0
+milestone_name: Full Act II ETL
+status: active
+last_updated: "2026-04-29T09:11:00.000Z"
+last_activity: 2026-04-29 — Milestone v3.0 started
 progress:
-  percent: 100
+  percent: 0
 ---
 
 # Project State
 
 ## Project Reference
 
-See: .planning/PROJECT.md (updated 2026-04-27 — post-v2.0 archive state)
+See: .planning/PROJECT.md (updated 2026-04-29 — v3.0 milestone start)
 
 **Core value:** Present the 125-year GDP-per-capita story as a beautiful, editorial, animated chart that communicates the long-arc transformation at a glance.
-**Current milestone:** None active
-**Current focus:** Post-v2.0 state. The shipped planning artifacts now live under `.planning/milestones/`, and the repo is ready for `$gsd-new-milestone`.
+**Current milestone:** v3.0 Full Act II ETL
+**Current focus:** Replace the local-proxy Act II data path with a full Eurostat-backed ETL sourced from the data-lake MCP.
 
 ## Current Position
 
-Active milestone: None
-Completed: Archived milestone state for phases 1 → 4
-Queued phases: None
-Status: Ready to define the next milestone
-Last activity: 2026-04-29 — Completed quick task 260429-erm: Implement editorial script (Act II-IV)
+Phase: Not started (defining requirements)
+Plan: —
+Status: Defining requirements
+Last activity: 2026-04-29 — Milestone v3.0 started
 
 Progress: 100% of the last active roadmap is complete.
 
