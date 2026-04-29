@@ -14,7 +14,7 @@ Summary
 5) Outlier check on growth rates: PASS
 6) Level plausibility: PASS
 7) Eurostat unit guard: PASS
-8) Baseline regression: WARN (1 issues)
+8) Baseline regression: PASS
 
 Details
 - 1) Seam continuity: PASS
@@ -27,12 +27,12 @@ Details
 - 5) Outlier check on growth rates: PASS
 - 6) Level plausibility: PASS
 - 7) Eurostat unit guard: PASS
-- 8) Baseline regression: WARN (1 issues)
-  - balearic_islands: corr=0.9361
-  - extremadura: corr=0.8703
-  - andalucia: corr=0.8731
-  - france: corr=-0.0482
-  - portugal: corr=-0.3189
-  - ireland: corr=-0.4305
-  - eu15_avg: corr=0.1537
-  - min=-0.4305, avg=0.2908
+- 8) Baseline regression: PASS
+  - balearic_islands: corr=1.0000
+  - extremadura: corr=1.0000
+  - andalucia: corr=1.0000
+  - france: corr=1.0000
+  - portugal: corr=1.0000
+  - ireland: corr=1.0000
+  - eu15_avg: corr=1.0000
+  - min=1.0000, avg=1.0000
