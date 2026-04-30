@@ -8,37 +8,32 @@ A Nuxt scrollytelling site about the Balearic Islands' GDP-per-capita arc from 1
 
 Present the long-run GDP-per-capita story as a beautiful, editorial, animated reading experience that makes the historical arc legible at a glance.
 
-## Current Milestone: v3.0 Full Act II ETL
+## Current Milestone
 
-**Goal:** Replace the `--act2-local-proxy` data path with a pipeline that sources Eurostat NAMA regional GDP from the data-lake MCP for all series, chain-links with Roses-Wolf, and emits the same `act2_*.csv` files.
-
-**Target features:**
-- Ingest Eurostat NAMA_10R_2GDP (NUTS2) from data-lake for Spanish regions (ES53, ES43, ES61)
-- Ingest Eurostat NAMA_10_PC (NUTS0) from data-lake for countries (FR, IE, PT, plus EU-15 set)
-- Chain-link all modern Eurostat series with Roses-Wolf (1900-1999) at an anchor year
-- Emit the 7 `act2_*.csv` files the frontend already consumes
-- Sanity checks validating full-ETL output against the local-proxy baseline
+No active milestone. v3.0 shipped 2026-04-30. Run `/gsd-new-milestone` to start the next cycle.
 
 ## Requirements
 
 ### Validated
 
-- ✓ Act I chart upgrade shipped: hidden points, nearest-x hover, Perlin-style distortion, arrowhead, 800 ms reveal.
-- ✓ Act II local-proxy data generation path shipped via `scripts/extend_gdp.py --act2-local-proxy`.
-- ✓ Act II comparison chart shipped with multi-line rendering and animated real-eur ↔ pct-eu15 transitions.
-- ✓ Act II scrollytelling scene shipped with preloaded data and the Step 8-17 narrative arc.
+- ✓ Act I chart upgrade shipped: hidden points, nearest-x hover, Perlin-style distortion, arrowhead, 800 ms reveal — v1.0
+- ✓ Act II local-proxy data generation path shipped via `scripts/extend_gdp.py --act2-local-proxy` — v2.0
+- ✓ Act II comparison chart shipped with multi-line rendering and animated real-eur ↔ pct-eu15 transitions — v2.0
+- ✓ Act II scrollytelling scene shipped with preloaded data and the Step 8-17 narrative arc — v2.0
+- ✓ Full Eurostat-backed ETL for all Act II comparison series via data-lake adapter with API fallback — v3.0
+- ✓ Chain-linking with Rosés-Wolf for every region at 2019 anchor; EU-15 population-weighted average with UK carry-forward — v3.0
+- ✓ Sanity validation against local-proxy baseline (8/8 PASS, growth-rate correlation = 1.0000) — v3.0
 
 ### Active
 
-- [ ] Full Eurostat-backed ETL for all Act II comparison series
-- [ ] Chain-linking with Roses-Wolf for every region
-- [ ] Sanity validation against local-proxy baseline
+(None — awaiting next milestone definition)
 
 ### Out of Scope
 
 - Server-side data APIs while static CSV delivery remains sufficient.
 - Broad UI state-management changes; the story remains component-driven.
 - Membership-date-aware EU-15 composition for the current analytical benchmark.
+- ONS-sourced UK GDP for 2020-2024 (carry-forward stopgap is acceptable for current Act II story).
 
 ## Context
 
@@ -50,7 +45,7 @@ Present the long-run GDP-per-capita story as a beautiful, editorial, animated re
 ## Known Gaps
 
 - Browser-based UAT for pacing, feel, and responsiveness is still manual.
-- The fully sourced Act II ETL remains deferred behind missing upstream raw data.
+- UK post-Brexit GDP relies on a 2019 carry-forward stopgap; real ONS integration not yet pursued.
 - GSD CLI milestone parsing is not fully aligned with the archived repo state.
 
 ## Key Decisions
@@ -60,10 +55,21 @@ Present the long-run GDP-per-capita story as a beautiful, editorial, animated re
 | Use Perlin/simplex-style distortion rather than random jitter | Preserve the line's trend while adding an editorial hand-drawn feel | ✓ Good |
 | Keep the Act I data asset untouched and emit separate `act2_*.csv` files | Avoid regressions in the shipped first-act story while enabling Act II | ✓ Good |
 | Build Act II as a dedicated chart component with shared helpers | The multi-line dual-axis behavior is structurally different from Act I | ✓ Good |
-| Ship Act II in local-proxy mode when raw inputs are missing | Better to ship honestly documented scope than imply a pipeline the repo cannot reproduce | ⚠ Revisit when full inputs arrive |
+| Ship Act II in local-proxy mode when raw inputs are missing | Better to ship honestly documented scope than imply a pipeline the repo cannot reproduce | ✓ Resolved in v3.0 — replaced by data-lake ETL |
 | Make the EU-15 baseline transition scroll-driven | The axis switch is a narrative beat, not a utility toggle | ✓ Good |
+| Batch ingestion (3 Eurostat sources) over per-geo ingestion (~20 sources) | Simpler static catalog index, fewer artifacts in the data-lake | ✓ Good |
+| Data-lake-first adapter with transparent API fallback | Reproducibility and offline runs without losing live-fetch escape hatch | ✓ Good |
+| 2019 anchor year for chain-linking instead of 2022 | Avoid COVID-distorted GDP levels in the splice point | ✓ Good |
+| UK 2019 carry-forward for 2020-2024 in EU-15 average | Eurostat NAMA_10_PC drops UK post-Brexit; carry-forward keeps the weighted average continuous | ⚠ Revisit if ONS data is needed |
 
 ## Previous Milestone Brief
+
+<details>
+<summary>Archived v3.0 focus</summary>
+
+v3.0's goal was to retire the local-proxy Act II data path and replace it with a real Eurostat-backed pipeline. Phase 5 ingested 3 Eurostat datasets into the data-lake, built a data-lake-first adapter with API fallback, chain-linked all 7 series to Rosés-Wolf at 2019, computed the EU-15 population-weighted average with UK carry-forward, and emitted the same `public/data/act2_*.csv` files the frontend already consumed. Verified by 8/8 sanity checks PASS and growth-rate correlation = 1.0000 against the local-proxy baseline. Full details in `.planning/milestones/v3.0-ROADMAP.md`.
+
+</details>
 
 <details>
 <summary>Archived v2.0 focus</summary>
@@ -90,4 +96,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-04-29 — Phase 5 complete: full Act II ETL replaces local-proxy with data-lake pipeline*
+*Last updated: 2026-04-30 after v3.0 milestone — Full Act II ETL shipped*
