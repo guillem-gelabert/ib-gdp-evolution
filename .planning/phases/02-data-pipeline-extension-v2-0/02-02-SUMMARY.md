@@ -27,6 +27,7 @@ metrics:
   files_created: 3
   files_modified: 0
 requirements: [DATA-02, DATA-03, DATA-05]
+requirements-completed: [DATA-02, DATA-03, DATA-05]
 ---
 
 # Phase 02 Plan 02: INE Spanish CCAA Chain-link Summary

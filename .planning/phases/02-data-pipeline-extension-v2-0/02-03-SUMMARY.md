@@ -27,6 +27,7 @@ metrics:
   files_created: 2
   files_modified: 1
 requirements: [DATA-04, DATA-06]
+requirements-completed: [DATA-04, DATA-06]
 ---
 
 # Phase 02 Plan 03: NUTS0 Peers + EU-15 Reference Series Summary

@@ -1,0 +1,25 @@
+GDP chain-linking sanity report
+
+Roses-Wolf input: /Users/guillem/vault/projects/personal/ib-gdp-evolution/public/data/balearic_gdp_pc.csv
+Eurostat input: /Users/guillem/vault/projects/personal/ib-gdp-evolution/public/data/roses_wolf_selected_comparison.csv
+Correspondence file: not provided
+Eurostat unit label: local proxy comparison inputs
+
+Summary
+1) Local proxy inputs: PASS
+2) Coverage check: PASS
+3) Data provenance: WARN (1 issues)
+
+Details
+- 1) Local proxy inputs: PASS
+  - balearic_islands: public/data/act2_balearic_islands.csv
+  - extremadura: public/data/act2_extremadura.csv
+  - andalucia: public/data/act2_andalucia.csv
+  - portugal: public/data/act2_portugal.csv
+  - ireland: public/data/act2_ireland.csv
+  - france: public/data/act2_france.csv
+  - eu15_avg: public/data/act2_eu15_avg.csv
+- 2) Coverage check: PASS
+  - 7 proxy series written from checked-in local data
+- 3) Data provenance: WARN (1 issues)
+  - Act II local-proxy mode uses checked-in comparison series instead of the full Phase 2 Eurostat/INE ETL.

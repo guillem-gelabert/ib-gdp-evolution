@@ -1315,8 +1315,10 @@ def run_act2(workspace: Path, anchor_year: int) -> tuple[dict[str, pd.DataFrame]
 
     # The checked-in workbook can be minimal; extend it with annualized comparison rows
     # and synthetic proxies so every Act II series has a pre-2000 base.
+    # Comparison CSV has real Rosés-Wolf values (2011 PPP $); workbook may contain
+    # synthetic data from Eurostat CLV (wrong unit). Comparison must win on overlap.
     comparison_rw = _comparison_series_to_rw_rows(workspace)
-    rw = pd.concat([comparison_rw, rw], ignore_index=True)
+    rw = pd.concat([rw, comparison_rw], ignore_index=True)
     rw = rw.sort_values(["nuts2_code", "year"]).drop_duplicates(["nuts2_code", "year"], keep="last")
 
     target_spanish_codes = [spec.rw_code for spec in act2_series_list() if spec.institutional == InstitutionalSource.ine]

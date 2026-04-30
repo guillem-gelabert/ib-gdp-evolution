@@ -30,8 +30,8 @@
   7. Sanity checks pass and growth-rate correlation ≥0.95 vs local-proxy baseline
 **Plans:** 2 plans
 Plans:
-- [ ] 05-01-PLAN.md — Data-lake ingestion, catalog index & ETL adapter
-- [ ] 05-02-PLAN.md — Series alignment, pipeline wiring & validation
+- [x] 05-01-PLAN.md — Data-lake ingestion, catalog index & ETL adapter
+- [x] 05-02-PLAN.md — Series alignment, pipeline wiring & validation
 
 ## Progress
 

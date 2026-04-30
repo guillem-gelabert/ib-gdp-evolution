@@ -173,57 +173,23 @@
         </div>
       </section>
 
-      <section ref="scrolly" id="scrolly" class="relative">
-        <figure
-          ref="figure"
-          class="sticky top-0 w-full h-screen m-0 flex flex-col justify-center items-center z-0 p-6 md:py-10 md:px-12"
-        >
-          <div class="w-full max-w-[1200px]">
-            <div class="mb-4">
-              <span
-                class="font-label text-[0.6875rem] uppercase tracking-[0.15em] font-bold text-accent"
-                >PIB per Càpita</span
-              >
-            </div>
-            <line-chart
-              :data="sliced || []"
-              :y-domain="yDomain"
-              :x-domain="xDomain"
-              :secondary-data="slicedTourists"
-              :secondary-y-domain="touristYDomain"
-              :scroll-driven="true"
-            />
+      <!-- Act 1: Balearic GDP story -->
+      <chart-explainer v-model:active-step="act1Step" :steps="act1Steps">
+        <template #chart>
+          <div class="mb-4">
+            <span
+              class="font-label text-[0.6875rem] uppercase tracking-[0.15em] font-bold text-accent"
+            >PIB per Càpita</span>
           </div>
-        </figure>
-
-        <article ref="article" class="relative z-10 pointer-events-none">
-          <div
-            v-for="(stepContent, index) in steps"
-            :key="index"
-            class="step snap-center min-h-screen pl-6 md:pl-0 pointer-events-none flex justify-center items-center"
-            :data-step="index + 1"
-          >
-            <div
-              class="grid justify-center items-center grid-rows-[min-content] max-w-[460px]"
-            >
-              <div
-                class="[grid-area:1/1] h-full w-full relative z-1 rounded-sm [filter:url(#shadow)] hidden"
-              ></div>
-              <div
-                class="bg-[rgba(255,241,229,0.92)] border border-rule-light py-5 px-6 md:py-8 md:px-10 [grid-area:1/1] relative z-0"
-              >
-                <p
-                  class="font-body text-sm md:text-[0.95rem] leading-[1.65] md:leading-[1.7] text-muted m-0 whitespace-pre-line"
-                >
-                  {{ stepContent.body }}
-                </p>
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
-
-      <div class="h-screen" aria-hidden="true"></div>
+          <line-chart
+            :data="act1Sliced"
+            :y-domain="act1YDomain"
+            :x-domain="act1XDomain"
+            :secondary-data="slicedTourists"
+            :secondary-y-domain="touristYDomain"
+          />
+        </template>
+      </chart-explainer>
 
       <section
         id="outro"
@@ -242,9 +208,38 @@
         </div>
       </section>
 
-      <div class="h-[50vh]" aria-hidden="true"></div>
+      <!-- Act 2: Comparative GDP story -->
+      <chart-explainer v-model:active-step="act2Step" :steps="act2Steps">
+        <template #chart>
+          <div class="mb-4 flex items-end justify-between gap-4">
+            <div>
+              <span
+                class="font-label text-[0.6875rem] uppercase tracking-[0.15em] font-bold text-accent"
+              >
+                Act II · Comparative GDP per Capita
+              </span>
+              <p class="mt-2 font-body text-sm text-muted">
+                {{
+                  act2ActiveConfig.axisMode === "pct-eu15"
+                    ? "% of EU-15 average"
+                    : "Real GDP per capita"
+                }}
+              </p>
+            </div>
+          </div>
 
-      <act2-story-section />
+          <act2-chart
+            :series-map="act2SeriesMap"
+            :axis-mode="act2ActiveConfig.axisMode"
+            :series-state="act2ActiveConfig.state"
+            :show-reference-line="act2ActiveConfig.axisMode === 'pct-eu15'"
+            :show-peak-band="act2ActiveConfig.showPeakBand"
+            :arrivals-data="act2ParsedArrivals"
+            :arrivals-y-domain="act2ArrivalsYDomain"
+            :show-arrivals="act2ActiveConfig.showArrivals"
+          />
+        </template>
+      </chart-explainer>
 
       <section
         id="act3"
@@ -393,48 +388,46 @@
   <div
     class="fixed bottom-4 right-4 z-[9999] font-body text-[11px] bg-ink/80 text-cream px-3 py-2 rounded pointer-events-none tabular-nums"
   >
-    <div>step {{ activeStep + 1 }} / {{ steps.length }}</div>
-  </div>
-
-  <!-- dev controls -->
-  <div
-    class="fixed top-4 right-4 z-[9999] font-body text-[11px] bg-ink/90 text-cream px-4 py-3 rounded shadow-lg pointer-events-auto tabular-nums space-y-2 min-w-[220px]"
-  >
-    <div class="font-bold text-[10px] uppercase tracking-widest opacity-60 mb-1">
-      Dev Controls
-    </div>
-    <label class="flex flex-col gap-1">
-      <span>Arrivals Y max: {{ (touristYMax / 1_000_000).toFixed(1) }}M</span>
-      <input
-        v-model.number="touristYMax"
-        type="range"
-        :min="500_000"
-        :max="30_000_000"
-        :step="500_000"
-        class="w-full accent-accent"
-      />
-    </label>
+    <div>act1 step {{ act1Step + 1 }} / {{ act1Steps.length }}</div>
+    <div>act2 step {{ act2Step + 1 }} / {{ act2Steps.length }}</div>
   </div>
 </template>
 
 <script setup lang="ts">
-import scrollama from "scrollama";
 import { csvParse, extent as d3Extent } from "d3";
 import type { GdpDataPoint } from "./line-chart.vue";
 
-const figure = ref<HTMLElement>();
-const article = ref<HTMLElement>();
-const scrolly = ref<HTMLElement>();
-const step = ref<Array<HTMLElement>>();
-const activeStep = ref(0);
-const scrollArrow = ref<SVGSVGElement | null>(null);
-const scrollArrowContainer = ref<HTMLElement | null>(null);
 const hero = ref<HTMLElement | null>(null);
 const heroContent = ref<HTMLElement | null>(null);
+const scrollArrowContainer = ref<HTMLElement | null>(null);
+const scrollArrow = ref<SVGSVGElement | null>(null);
 const scrollArrowStickyTop = ref(0);
 const scrollArrowHeight = ref(418);
 
-const steps = [
+const computeArrowStickyTop = () => {
+  if (!scrollArrowContainer.value || !heroContent.value) return;
+  scrollArrowHeight.value = Math.round(window.innerHeight);
+  const contentBottomPageY =
+    heroContent.value.getBoundingClientRect().bottom + window.scrollY;
+  const headReveal = 50;
+  scrollArrowStickyTop.value =
+    contentBottomPageY + headReveal - scrollArrowHeight.value;
+};
+
+onMounted(() => {
+  computeArrowStickyTop();
+  window.addEventListener("resize", computeArrowStickyTop);
+});
+
+onBeforeUnmount(() => {
+  window.removeEventListener("resize", computeArrowStickyTop);
+});
+
+// ─── Act 1: Balearic GDP ────────────────────────────────────────────
+
+const act1Step = ref(0);
+
+const act1Steps = [
   {
     body: "At the turn of the twentieth century, the Balearics were a rural economy built on almonds, olives, figs, fishing, and the slow, patient work of getting by.",
     from: 1900,
@@ -517,16 +510,6 @@ const { data: touristCsv } = await useFetch("/data/tourist_arrivals.csv", {
   server: false,
 });
 
-const COMPARISON_SERIES = [
-  "France avg",
-  "Andalucia",
-  "Extremadura",
-  "Spain avg",
-  "Portugal avg",
-  "Ireland avg",
-  "Europe avg",
-];
-
 const parsed = computed<Array<GdpDataPoint>>(() => {
   if (typeof gdpCsv.value !== "string") return [];
   return csvParse(gdpCsv.value)
@@ -540,8 +523,8 @@ const parsed = computed<Array<GdpDataPoint>>(() => {
     .sort((a, b) => a.year - b.year);
 });
 
-const sliced = computed<Array<GdpDataPoint>>(() => {
-  const step = steps[activeStep.value];
+const act1Sliced = computed<Array<GdpDataPoint>>(() => {
+  const step = act1Steps[act1Step.value];
   if (!step || parsed.value.length === 0) return [];
   return parsed.value.filter(
     (d) => d.year >= step.from && d.year <= step.to,
@@ -567,94 +550,251 @@ const TOURIST_MAX_YEAR = 1950;
 const TOURIST_FULL_STEP = 9;
 
 const slicedTourists = computed<Array<GdpDataPoint>>(() => {
-  if (activeStep.value < TOURIST_FIRST_STEP) return [];
+  if (act1Step.value < TOURIST_FIRST_STEP) return [];
   if (parsedTourists.value.length === 0) return [];
-  const maxYear = activeStep.value >= TOURIST_FULL_STEP ? 2100 : TOURIST_MAX_YEAR;
+  const maxYear = act1Step.value >= TOURIST_FULL_STEP ? 2100 : TOURIST_MAX_YEAR;
   return parsedTourists.value.filter(
     (d) => d.year >= 1900 && d.year <= maxYear,
   );
 });
 
-const touristYMax = ref(20_000_000);
 const touristYDomain = computed<[number, number]>(() => {
   if (parsedTourists.value.length === 0) return [0, 1];
-  return [0, touristYMax.value];
+  return [0, 20_000_000];
 });
 
-const yDomain = computed(() => {
+const act1YDomain = computed(() => {
   if (parsed.value.length === 0) return [0, 1] as [number, number];
   const ext = d3Extent(parsed.value, (d) => d.gdp_pc);
   return [0, ext[1] ?? 1] as [number, number];
 });
 
-const xDomain = computed<[number, number]>(() => {
-  const step = steps[activeStep.value] ?? steps[0];
+const act1XDomain = computed<[number, number]>(() => {
+  const step = act1Steps[act1Step.value] ?? act1Steps[0];
   if (!step) return [1900, 1990];
   return [step.from, step.xMax];
 });
 
-const computeArrowStickyTop = () => {
-  if (!scrollArrowContainer.value || !heroContent.value) return;
-  scrollArrowHeight.value = Math.round(window.innerHeight);
-  const contentBottomPageY =
-    heroContent.value.getBoundingClientRect().bottom + window.scrollY;
-  const headReveal = 50;
-  scrollArrowStickyTop.value =
-    contentBottomPageY + headReveal - scrollArrowHeight.value;
+// ─── Act 2: Comparative GDP ─────────────────────────────────────────
+
+const act2Step = ref(0);
+
+const act2Steps = [
+  {
+    body: "So: the line climbed. The islanders stopped being poor. And the story we tell ourselves is that tourism is what did it.\n\nThere is one way to check whether that's true. Look at who else got richer in the same years.",
+  },
+  {
+    body: "This is Extremadura. It is the poorest region in Spain. It has no coastline. It has no airport worth the name. In 1960, when the first charter flights were landing in Palma, Extremadura had roughly a million people, most of them working land that had been worked the same way for centuries.\n\nWatch what its line does anyway.",
+  },
+  {
+    body: "Extremadura's economy grew in the same decades as ours. Not as fast. Not as high. But the curve is the same curve: a long flat century, then a bend, then a climb.\n\nExtremadura had no Magaluf. No Playa de Palma. No hotels built on the coast because there is no coast. And still, its line goes up. In the same years. For roughly the same reasons we are about to discuss.",
+  },
+  {
+    body: "It isn't just Extremadura. Andalucia did it. Portugal did it. Ireland did it faster than anyone.\n\nWhat all of these places share is not tourism. What they share is the second half of the twentieth century: the end of autarky, the opening of trade, the arrival of foreign capital, the construction of welfare states, the long European peace, eventually EU membership. The tailwind was continental. Every region caught some of it.\n\nWe caught ours through tourism. Extremadura caught theirs through something else. Ireland caught theirs through yet another thing. The wind was the same wind.",
+  },
+  {
+    body: "Which leaves us with an uncomfortable question. If the climb wasn't tourism — if the climb was a thing that was happening anyway, to regions that had nothing like our industry — then what, exactly, did tourism do for the Balearics?\n\nThere is one way to answer that. Stop asking how much. Start asking compared to whom.",
+  },
+  {
+    body: "Same data. Different question. The GDP lines have just been re-indexed against the European average.\n\nThe arrivals line hasn't moved. It can't be re-indexed — there is no European average of \"tourists per region.\" It is what it has always been: a count, climbing.",
+  },
+  {
+    body: "For three decades, the two lines moved together. Both climbing. Both telling the same story.\n\nAnd then, around 1990, the GDP line stopped climbing. The arrivals line didn't.\n\nThe arrivals line kept doing what it had always done. More flights, more hotels, more visitors. A new record almost every year, announced from a podium in front of a logo, applauded by industry and government and most of the press.\n\nMeanwhile — quietly, on the same chart, on the same x-axis — the relative GDP line started drifting downward. Not crashing. Drifting. Year after year, summer after record-breaking summer, the islands' position on the European scoreboard slipped a little further back.\n\nThis is the picture the myth does not survive.",
+  },
+  {
+    body: "Meanwhile, the neighbors kept moving. Ireland kept climbing. Portugal held more steady. Extremadura continued its slower convergence — slowly, steadily, the way it had been doing the whole time.\n\nThe Balearics are among the few European regions that reached a peak, in relative terms, and then spent the following decades falling away from it.",
+  },
+  {
+    body: "Two lines. One x-axis. From 1960 to 1990, they climb together. From 1990 to today, they don't.\n\nThe climb was not unique to us. The fall is. And every record-breaking summer since 1990 has happened on the way down.",
+  },
+];
+
+const act2SlugToPath: Record<string, string> = {
+  balearic_islands: "/data/act2_balearic_islands.csv",
+  extremadura: "/data/act2_extremadura.csv",
+  andalucia: "/data/act2_andalucia.csv",
+  portugal: "/data/act2_portugal.csv",
+  ireland: "/data/act2_ireland.csv",
+  france: "/data/act2_france.csv",
+  eu15_avg: "/data/act2_eu15_avg.csv",
 };
 
-let snapObserver: IntersectionObserver | null = null;
+const act2Fetches = await Promise.all(
+  Object.entries(act2SlugToPath).map(async ([slug, path]) => {
+    const { data } = await useFetch(path, { server: false });
+    return [slug, data] as const;
+  }),
+);
 
-onMounted(() => {
-  computeArrowStickyTop();
-  window.addEventListener("resize", computeArrowStickyTop);
-
-  const scroller = scrollama();
-
-  step.value = Array.from(article.value?.querySelectorAll(".step") || []);
-
-  function handleResize() {
-    scroller.resize();
-  }
-
-  function init() {
-    handleResize();
-    if (!step.value || step.value.length === 0) return;
-    scroller
-      .setup({
-        step: step.value,
-        offset: 0.5,
-        debug: false,
-      })
-      .onStepEnter((r) => {
-        activeStep.value = r.index;
-      });
-  }
-
-  init();
-
-  const html = document.documentElement;
-  const active = new Set<Element>();
-  snapObserver = new IntersectionObserver(
-    (entries) => {
-      for (const e of entries) {
-        if (e.isIntersecting) active.add(e.target);
-        else active.delete(e.target);
-      }
-      html.style.scrollSnapType = active.size > 0 ? "y mandatory" : "";
-    },
-    { threshold: 0 },
+const act2SeriesMap = computed<Record<string, Array<GdpDataPoint>>>(() => {
+  return Object.fromEntries(
+    act2Fetches.map(([slug, data]) => [
+      slug,
+      typeof data.value === "string"
+        ? csvParse(data.value)
+            .map((row) => ({
+              year: Number(row.year),
+              gdp_pc: Number(row.gdp_pc),
+              source: row.source ?? slug,
+              unit: row.unit,
+            }))
+            .filter(
+              (row) => Number.isFinite(row.year) && Number.isFinite(row.gdp_pc),
+            )
+        : [],
+    ]),
   );
-
-  const scrollySections = document.querySelectorAll(
-    "#scrolly, #act2-scrolly",
-  );
-  scrollySections.forEach((s) => snapObserver!.observe(s));
 });
 
-onBeforeUnmount(() => {
-  window.removeEventListener("resize", computeArrowStickyTop);
-  snapObserver?.disconnect();
-  document.documentElement.style.scrollSnapType = "";
+const act2ParsedArrivals = computed<Array<GdpDataPoint>>(() => {
+  if (typeof touristCsv.value !== "string") return [];
+  return csvParse(touristCsv.value)
+    .filter((d) => d.display !== "false")
+    .map((d) => ({
+      year: +d.year!,
+      gdp_pc: parseFloat(d.arrivals!),
+      source: "Tourists",
+      unit: d.source!,
+    }))
+    .filter((d) => !Number.isNaN(d.year) && !Number.isNaN(d.gdp_pc))
+    .sort((a, b) => a.year - b.year);
+});
+
+const act2ArrivalsYDomain = computed<[number, number]>(() => {
+  if (act2ParsedArrivals.value.length === 0) return [0, 1];
+  return [0, 20_000_000];
+});
+
+const act2Configs = [
+  {
+    axisMode: "real-eur" as const,
+    showPeakBand: false,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "highlight" as const },
+      extremadura: { visible: false },
+      andalucia: { visible: false },
+      portugal: { visible: false },
+      ireland: { visible: false },
+      france: { visible: false },
+      eu15_avg: { visible: false },
+    },
+  },
+  {
+    axisMode: "real-eur" as const,
+    showPeakBand: false,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "normal" as const },
+      extremadura: { visible: true, emphasis: "highlight" as const },
+      andalucia: { visible: false },
+      portugal: { visible: false },
+      ireland: { visible: false },
+      france: { visible: false },
+      eu15_avg: { visible: false },
+    },
+  },
+  {
+    axisMode: "real-eur" as const,
+    showPeakBand: false,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "highlight" as const },
+      extremadura: { visible: true, emphasis: "normal" as const },
+      andalucia: { visible: false },
+      portugal: { visible: false },
+      ireland: { visible: false },
+      france: { visible: false },
+      eu15_avg: { visible: false },
+    },
+  },
+  {
+    axisMode: "real-eur" as const,
+    showPeakBand: false,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "normal" as const },
+      extremadura: { visible: true, emphasis: "normal" as const },
+      andalucia: { visible: true, emphasis: "normal" as const },
+      portugal: { visible: true, emphasis: "normal" as const },
+      ireland: { visible: true, emphasis: "highlight" as const },
+      france: { visible: true, emphasis: "normal" as const },
+      eu15_avg: { visible: false },
+    },
+  },
+  {
+    axisMode: "real-eur" as const,
+    showPeakBand: false,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "highlight" as const },
+      extremadura: { visible: true, emphasis: "muted" as const },
+      andalucia: { visible: true, emphasis: "muted" as const },
+      portugal: { visible: true, emphasis: "muted" as const },
+      ireland: { visible: true, emphasis: "muted" as const },
+      france: { visible: true, emphasis: "muted" as const },
+      eu15_avg: { visible: false },
+    },
+  },
+  {
+    axisMode: "pct-eu15" as const,
+    showPeakBand: false,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "highlight" as const },
+      extremadura: { visible: true, emphasis: "muted" as const },
+      andalucia: { visible: true, emphasis: "muted" as const },
+      portugal: { visible: true, emphasis: "muted" as const },
+      ireland: { visible: true, emphasis: "muted" as const },
+      france: { visible: true, emphasis: "muted" as const },
+      eu15_avg: { visible: true, emphasis: "normal" as const },
+    },
+  },
+  {
+    axisMode: "pct-eu15" as const,
+    showPeakBand: true,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "highlight" as const },
+      extremadura: { visible: true, emphasis: "muted" as const },
+      andalucia: { visible: true, emphasis: "muted" as const },
+      portugal: { visible: true, emphasis: "muted" as const },
+      ireland: { visible: true, emphasis: "muted" as const },
+      france: { visible: true, emphasis: "muted" as const },
+      eu15_avg: { visible: true, emphasis: "normal" as const },
+    },
+  },
+  {
+    axisMode: "pct-eu15" as const,
+    showPeakBand: true,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "highlight" as const },
+      extremadura: { visible: true, emphasis: "normal" as const },
+      andalucia: { visible: true, emphasis: "muted" as const },
+      portugal: { visible: true, emphasis: "normal" as const },
+      ireland: { visible: true, emphasis: "highlight" as const },
+      france: { visible: true, emphasis: "muted" as const },
+      eu15_avg: { visible: true, emphasis: "normal" as const },
+    },
+  },
+  {
+    axisMode: "pct-eu15" as const,
+    showPeakBand: true,
+    showArrivals: true,
+    state: {
+      balearic_islands: { visible: true, emphasis: "highlight" as const },
+      extremadura: { visible: false },
+      andalucia: { visible: false },
+      portugal: { visible: false },
+      ireland: { visible: false },
+      france: { visible: false },
+      eu15_avg: { visible: true, emphasis: "normal" as const },
+    },
+  },
+];
+
+const act2ActiveConfig = computed(() => {
+  return act2Configs[act2Step.value] ?? act2Configs[0]!;
 });
 </script>

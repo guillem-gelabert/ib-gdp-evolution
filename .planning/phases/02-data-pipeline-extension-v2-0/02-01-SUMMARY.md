@@ -27,6 +27,7 @@ metrics:
   files_created: 4
   files_modified: 0
 requirements: [DATA-01, DATA-02]
+requirements-completed: [DATA-01, DATA-02]
 ---
 
 # Phase 02 Plan 01: Data Pipeline Foundation Summary

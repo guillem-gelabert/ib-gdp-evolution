@@ -1,0 +1,48 @@
+bucket,rank,id,label,r_yoy_growth_vs_ib_1900_1990
+top5_spanish_ccaa,1,ES62,Región de Murcia,0.966646
+top5_spanish_ccaa,2,ES61,Andalucía,0.963942
+top5_spanish_ccaa,3,ES51,Cataluña,0.933472
+top5_spanish_ccaa,4,ES52,Comunidad Valenciana,0.926787
+top5_spanish_ccaa,5,ES24,Aragón,0.919656
+top5_country,1,Belgium,Belgium,0.769693
+top5_country,2,Portugal,Portugal,0.740622
+top5_country,3,France,France,0.733866
+top5_country,4,IRELAND,IRELAND,0.733542
+top5_country,5,Italy,Italy,0.709209
+
+# all_spanish_ccaa_ranked
+rank,code,label,r_yoy_growth_vs_ib_1900_1990
+1,ES62,Región de Murcia,0.966646
+2,ES61,Andalucía,0.963942
+3,ES51,Cataluña,0.933472
+4,ES52,Comunidad Valenciana,0.926787
+5,ES24,Aragón,0.919656
+6,ES11,Galicia,0.893451
+7,ES30,Comunidad de Madrid,0.868252
+8,ES43,Extremadura,0.859695
+9,ES70,Canarias,0.855144
+10,ES22,Comunidad Foral de Navarra,0.851104
+11,ES42,Castilla-La Mancha,0.832381
+12,ES13,Cantabria,0.823417
+13,ES21,País Vasco,0.753419
+14,ES41,Castilla y León,0.749475
+15,ES23,La Rioja,0.694369
+16,ES12,Principado de Asturias,0.624102
+
+# all_countries_ranked_ex_spain
+rank,country,r_yoy_growth_vs_ib_1900_1990
+1,Belgium,0.769693
+2,Portugal,0.740622
+3,France,0.733866
+4,IRELAND,0.733542
+5,Italy,0.709209
+6,Netherlands,0.665122
+7,Austria,0.582774
+8,Switzerland,0.475966
+9,Norway,0.398321
+10,Sweden,0.367767
+11,LUXEMBOURG,0.337688
+12,United Kingdom,0.240268
+13,Denmark,0.228306
+14,Finland,0.197112
+15,Germany,0.176951
