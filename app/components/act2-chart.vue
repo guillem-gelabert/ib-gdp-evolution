@@ -155,8 +155,7 @@ const HEIGHT = 460;
 const MARGIN = { top: 28, right: 84, bottom: 42, left: 66 };
 const innerWidth = WIDTH - MARGIN.left - MARGIN.right;
 const innerHeight = HEIGHT - MARGIN.top - MARGIN.bottom;
-const modeProgress = ref(props.axisMode === "pct-eu15" ? 1 : 0);
-let rafId: number | null = null;
+const modeProgress = computed(() => (props.axisMode === "pct-eu15" ? 1 : 0));
 
 const displayMeta: Record<string, { label: string; color: string }> = {
   balearic_islands: { label: "Balearics", color: EDITORIAL_LINE_COLOR },
@@ -193,29 +192,6 @@ const eu15ByYear = computed(() => {
     map.set(point.year, point.gdp_pc);
   }
   return map;
-});
-
-function animateMode(target: number) {
-  if (rafId) cancelAnimationFrame(rafId);
-  const start = modeProgress.value;
-  const startTime = performance.now();
-  const duration = 1250;
-  const step = (now: number) => {
-    const elapsed = Math.min(1, (now - startTime) / duration);
-    const eased = 1 - Math.pow(1 - elapsed, 3);
-    modeProgress.value = start + (target - start) * eased;
-    if (elapsed < 1) rafId = requestAnimationFrame(step);
-  };
-  rafId = requestAnimationFrame(step);
-}
-
-watch(
-  () => props.axisMode,
-  (mode) => animateMode(mode === "pct-eu15" ? 1 : 0),
-);
-
-onBeforeUnmount(() => {
-  if (rafId) cancelAnimationFrame(rafId);
 });
 
 function xForYear(year: number) {
